@@ -1,0 +1,2796 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>나의 은퇴 시뮬레이터 Ver.1.0</title>
+
+<!-- PWA 메타태그 -->
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#2563eb">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="은퇴시뮬">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<meta name="description" content="은퇴 후 자산 관리, 현금 흐름 시뮬레이션">
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<style>
+:root {
+  --bg: #f0f2f5;
+  --card: #ffffff;
+  --text: #1a1a2e;
+  --text2: #555;
+  --border: #e0e0e0;
+  --primary: #2563eb;
+  --primary-light: #dbeafe;
+  --accent: #10b981;
+  --danger: #ef4444;
+  --warning: #f59e0b;
+  --shadow: 0 2px 8px rgba(0,0,0,0.08);
+  --radius: 12px;
+}
+.dark {
+  --bg: #0f172a;
+  --card: #1e293b;
+  --text: #e2e8f0;
+  --text2: #94a3b8;
+  --border: #334155;
+  --primary: #3b82f6;
+  --primary-light: #1e3a5f;
+  --shadow: 0 2px 8px rgba(0,0,0,0.3);
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+body {
+  font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  transition: background 0.3s, color 0.3s;
+}
+.header {
+  background: linear-gradient(135deg, #1e40af, #3b82f6);
+  color: white;
+  padding: 16px 24px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.15);
+}
+.header-title { flex: 1; text-align: center; }
+.header h1 { font-size: 1.6rem; font-weight: 700; margin: 0; letter-spacing: 1px; }
+.header-sub { font-size: 0.8rem; opacity: 0.85; margin: 2px 0 0; font-weight: 400; }
+.header-right { display: flex; gap: 12px; align-items: center; }
+.app-footer {
+  background: linear-gradient(135deg, #1e40af, #3b82f6);
+  color: white;
+  padding: 18px 24px;
+  text-align: center;
+  margin-top: 24px;
+  border-radius: 12px;
+}
+.app-footer .footer-quote {
+  font-style: italic;
+  font-size: 0.88rem;
+  opacity: 0.92;
+  line-height: 1.5;
+  margin-bottom: 10px;
+}
+.app-footer .footer-author {
+  font-size: 0.72rem;
+  opacity: 0.65;
+  margin-top: 8px;
+}
+.app-footer .footer-copy {
+  font-size: 0.75rem;
+  opacity: 0.8;
+  margin-top: 2px;
+}
+.theme-toggle {
+  background: rgba(255,255,255,0.2);
+  border: none;
+  color: white;
+  padding: 8px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 1.1rem;
+}
+.theme-toggle:hover { background: rgba(255,255,255,0.3); }
+.tab-nav {
+  display: flex;
+  background: var(--card);
+  border-bottom: 2px solid var(--border);
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+.tab-nav button {
+  flex: 1;
+  min-width: 140px;
+  padding: 14px 20px;
+  border: none;
+  background: none;
+  color: var(--text2);
+  font-size: 0.95rem;
+  font-weight: 500;
+  cursor: pointer;
+  border-bottom: 3px solid transparent;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+.tab-nav button:hover { color: var(--primary); background: var(--primary-light); }
+.tab-nav button.active {
+  color: var(--primary);
+  border-bottom-color: var(--primary);
+  font-weight: 700;
+}
+.tab-content { display: none; padding: 20px; max-width: 1400px; margin: 0 auto; }
+.tab-content.active { display: block; }
+.card {
+  background: var(--card);
+  border-radius: var(--radius);
+  padding: 20px;
+  margin-bottom: 20px;
+  box-shadow: var(--shadow);
+  border: 1px solid var(--border);
+}
+.card h2 {
+  font-size: 1.1rem;
+  font-weight: 700;
+  margin-bottom: 16px;
+  padding-bottom: 8px;
+  border-bottom: 2px solid var(--primary);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.card h3 {
+  font-size: 0.95rem;
+  font-weight: 600;
+  margin: 12px 0 8px;
+  color: var(--primary);
+}
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 12px;
+  margin-bottom: 12px;
+}
+.form-group { display: flex; flex-direction: column; gap: 4px; }
+.form-group label {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text2);
+}
+.form-group input, .form-group select {
+  padding: 8px 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font-size: 0.9rem;
+  background: var(--bg);
+  color: var(--text);
+  transition: border 0.2s;
+}
+.form-group input:focus, .form-group select:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(37,99,235,0.1);
+}
+.btn {
+  padding: 8px 16px;
+  border: none;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.btn-primary { background: var(--primary); color: white; }
+.btn-primary:hover { background: #1d4ed8; transform: translateY(-1px); }
+.btn-accent { background: var(--accent); color: white; }
+.btn-accent:hover { background: #059669; }
+.btn-danger { background: var(--danger); color: white; }
+.btn-danger:hover { background: #dc2626; }
+.btn-warning { background: var(--warning); color: white; }
+.btn-sm { padding: 5px 10px; font-size: 0.78rem; }
+.btn-group { display: flex; gap: 8px; flex-wrap: wrap; margin: 12px 0; }
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+  margin-top: 8px;
+}
+th, td {
+  padding: 8px 10px;
+  text-align: right;
+  border-bottom: 1px solid var(--border);
+}
+th {
+  background: var(--primary-light);
+  font-weight: 600;
+  position: sticky;
+  top: 0;
+}
+td:first-child, th:first-child { text-align: left; }
+tr:hover td { background: var(--primary-light); }
+.table-wrap { overflow-x: auto; max-height: 500px; overflow-y: auto; }
+.chart-container {
+  position: relative;
+  width: 100%;
+  max-height: 400px;
+  margin: 16px 0;
+}
+.profile-banner {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+.profile-card {
+  flex: 1;
+  min-width: 240px;
+  background: var(--card);
+  border-radius: 14px;
+  padding: 16px 20px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+  border: 1px solid var(--border);
+}
+.profile-avatar {
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.6rem;
+  flex-shrink: 0;
+}
+.profile-info { flex: 1; }
+.profile-info .p-nickname {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--text);
+}
+.profile-info .p-name {
+  font-size: 0.8rem;
+  color: var(--text2);
+  margin-top: 1px;
+}
+.profile-info .p-detail {
+  font-size: 0.82rem;
+  color: var(--text2);
+  margin-top: 4px;
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.profile-info .p-detail span {
+  background: var(--bg);
+  padding: 2px 8px;
+  border-radius: 8px;
+  font-size: 0.78rem;
+}
+.summary-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 12px;
+  margin-bottom: 16px;
+}
+.summary-card {
+  background: linear-gradient(135deg, var(--primary), #6366f1);
+  color: white;
+  padding: 16px;
+  border-radius: var(--radius);
+  text-align: center;
+}
+.summary-card.green { background: linear-gradient(135deg, #059669, #10b981); }
+.summary-card.orange { background: linear-gradient(135deg, #d97706, #f59e0b); }
+.summary-card.red { background: linear-gradient(135deg, #dc2626, #ef4444); }
+.summary-card.teal { background: linear-gradient(135deg, #0d9488, #14b8a6); }
+.summary-card.purple { background: linear-gradient(135deg, #7c3aed, #a78bfa); }
+.summary-card.sky { background: linear-gradient(135deg, #0284c7, #38bdf8); }
+.summary-card.rose { background: linear-gradient(135deg, #be123c, #fb7185); }
+.summary-card.amber { background: linear-gradient(135deg, #b45309, #fbbf24); }
+.summary-card.indigo { background: linear-gradient(135deg, #4338ca, #818cf8); }
+.summary-card.emerald { background: linear-gradient(135deg, #047857, #34d399); }
+.summary-card .label { font-size: 0.8rem; opacity: 0.9; }
+.summary-card .value { font-size: 1.4rem; font-weight: 700; margin-top: 4px; }
+.income-item {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 12px;
+  margin-bottom: 8px;
+  position: relative;
+}
+.income-item.editable { cursor: pointer; transition: background 0.15s; }
+.income-item.editable:hover { background: var(--primary-light); }
+.income-item .delete-btn {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  background: none;
+  border: none;
+  color: var(--danger);
+  cursor: pointer;
+  font-size: 1.1rem;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+.income-item .delete-btn:hover { background: rgba(239,68,68,0.1); }
+.account-tabs {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+}
+.account-tab {
+  padding: 8px 16px;
+  border: 2px solid var(--border);
+  border-radius: 20px;
+  background: var(--bg);
+  color: var(--text);
+  cursor: pointer;
+  font-size: 0.85rem;
+  font-weight: 500;
+  transition: all 0.2s;
+}
+.account-tab.active {
+  border-color: var(--primary);
+  background: var(--primary);
+  color: white;
+}
+.two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+.num-positive { color: #10b981; font-weight: 600; }
+.num-negative { color: #ef4444; font-weight: 600; }
+.modal-overlay {
+  display: none;
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0,0,0,0.5);
+  z-index: 200;
+  justify-content: center;
+  align-items: center;
+}
+.modal-overlay.show { display: flex; }
+.modal {
+  background: var(--card);
+  border-radius: var(--radius);
+  padding: 24px;
+  max-width: 500px;
+  width: 90%;
+  max-height: 80vh;
+  overflow-y: auto;
+}
+.modal h3 { margin-bottom: 16px; font-size: 1.1rem; }
+.toast {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  background: var(--accent);
+  color: white;
+  padding: 12px 20px;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  font-weight: 500;
+  z-index: 300;
+  transform: translateY(100px);
+  opacity: 0;
+  transition: all 0.3s;
+}
+.toast.show { transform: translateY(0); opacity: 1; }
+@media (max-width: 768px) {
+  .header h1 { font-size: 1.15rem; }
+  .header-sub { font-size: 0.7rem; }
+  .tab-nav button { min-width: 100px; padding: 10px 12px; font-size: 0.82rem; }
+  .tab-content { padding: 12px; }
+  .form-grid { grid-template-columns: 1fr 1fr; }
+  .two-col { grid-template-columns: 1fr; }
+  .summary-cards { grid-template-columns: 1fr 1fr; }
+}
+@media (max-width: 480px) {
+  .form-grid { grid-template-columns: 1fr; }
+  .summary-cards { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-title">
+    <h1>나의 은퇴 시뮬레이터 <span style="font-size:0.45em;font-weight:400;opacity:0.7;letter-spacing:0;">by 쫑아빠</span></h1>
+    <p class="header-sub">(은퇴 후 자산 관리, 현금 흐름 시뮬레이션) Ver.1.0</p>
+  </div>
+  <div class="header-right">
+    <button class="theme-toggle" onclick="toggleTheme()" title="다크/라이트 모드">🌙</button>
+  </div>
+</div>
+
+<nav class="tab-nav">
+  <button class="active" onclick="switchTab('cashflow')">💰 월 현금 흐름</button>
+  <button onclick="switchTab('portfolio')">📊 자산 포트폴리오</button>
+  <button onclick="switchTab('accounts')">📋 계좌별 포트폴리오</button>
+  <button onclick="switchTab('settings')">⚙️ 설정</button>
+</nav>
+
+<!-- ===== 탭 1: 월 현금 흐름 ===== -->
+<div id="tab-cashflow" class="tab-content active">
+  <div id="profile-banner" class="profile-banner"></div>
+  <div class="summary-cards" id="cashflow-summary"></div>
+
+  <div class="card">
+    <h2>📥 수입원 관리</h2>
+    <div class="btn-group">
+      <button class="btn btn-primary" onclick="addIncome('pension')">+ 연금 추가</button>
+      <button class="btn btn-accent" onclick="addIncome('investment')">+ 투자수입 추가</button>
+      <button class="btn btn-warning" onclick="addIncome('other')">+ 기타수입 추가</button>
+    </div>
+    <div id="income-list"></div>
+  </div>
+
+  <div class="card">
+    <h2>📤 지출 관리</h2>
+    <div class="btn-group">
+      <button class="btn btn-primary" onclick="addExpense()">+ 지출항목 추가</button>
+    </div>
+    <div id="expense-list"></div>
+  </div>
+
+  <div class="card">
+    <h2>📊 나이대별 월 현금흐름 (수입/지출)</h2>
+    <div class="btn-group">
+      <button class="btn btn-primary btn-sm" onclick="calculateCashflow()">차트 갱신</button>
+    </div>
+    <div class="chart-container" style="height:380px;max-height:500px;">
+      <canvas id="cashflow-chart"></canvas>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>📈 월 현금흐름 추이</h2>
+    <div class="chart-container" style="height:380px;max-height:500px;">
+      <canvas id="netcashflow-chart"></canvas>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>📋 나이대별 월 현금흐름 상세</h2>
+    <div class="table-wrap" id="cashflow-table-wrap"></div>
+  </div>
+  <div class="app-footer" id="footer-tab1"></div>
+</div>
+
+<!-- ===== 탭 2: 자산 포트폴리오 ===== -->
+<div id="tab-portfolio" class="tab-content">
+  <div class="summary-cards" id="asset-summary"></div>
+
+  <div class="card">
+    <h2>🏦 자산 입력</h2>
+    <div class="btn-group">
+      <button class="btn btn-primary" onclick="addAsset()">+ 자산 추가</button>
+    </div>
+    <div id="asset-list"></div>
+  </div>
+
+  <div class="two-col" id="asset-charts-row" style="align-items:stretch;">
+    <div class="card" style="display:flex;flex-direction:column;">
+      <h2>🥧 자산 비율</h2>
+      <div id="asset-pie-wrap" style="flex:1;display:flex;align-items:center;justify-content:center;min-height:200px;">
+        <canvas id="asset-pie-chart"></canvas>
+      </div>
+    </div>
+    <div class="card" id="asset-breakdown-card">
+      <h2>📊 자산 현황 <span id="asset-date-label" style="font-size:0.75rem;font-weight:500;color:var(--text2);"></span></h2>
+      <div id="asset-breakdown"></div>
+    </div>
+  </div>
+  <div class="app-footer" id="footer-tab2"></div>
+</div>
+
+<!-- ===== 탭 3: 계좌별 포트폴리오 ===== -->
+<div id="tab-accounts" class="tab-content">
+  <div class="card">
+    <h2>📂 계좌 관리</h2>
+    <div class="btn-group">
+      <button class="btn btn-primary" onclick="addAccount()">+ 계좌 추가</button>
+    </div>
+    <div class="account-tabs" id="account-tabs"></div>
+  </div>
+
+  <div id="account-detail" style="display:none;">
+    <div class="card">
+      <h2 id="account-detail-title">종목 관리</h2>
+      <div class="btn-group">
+        <button class="btn btn-primary" onclick="addHolding()">+ 종목 추가</button>
+        <button class="btn btn-sm" style="background:#10b981;color:white;" onclick="fetchCurrentPrices()" id="btn-fetch-prices">📡 현재가 갱신</button>
+        <button class="btn btn-primary btn-sm" onclick="editAccount()">계좌 수정</button>
+        <button class="btn btn-danger btn-sm" onclick="deleteCurrentAccount()">계좌 삭제</button>
+      </div>
+      <div id="price-update-status" style="font-size:0.78rem;color:var(--text2);margin:4px 0 8px;display:none;"></div>
+      <div class="table-wrap">
+        <table id="holdings-table">
+          <thead>
+            <tr>
+              <th>종목명</th>
+              <th>매수단가</th>
+              <th>수량</th>
+              <th>현재가</th>
+              <th>평가금액</th>
+              <th>수익률</th>
+              <th>배당률(%)</th>
+              <th>연배당금</th>
+              <th>관리</th>
+            </tr>
+          </thead>
+          <tbody id="holdings-body"></tbody>
+          <tfoot id="holdings-foot"></tfoot>
+        </table>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="two-col">
+    <div class="card">
+      <h2>🥧 전체 종목 비율</h2>
+      <div class="chart-container" style="max-height:400px;">
+        <canvas id="holdings-pie-chart"></canvas>
+      </div>
+    </div>
+    <div class="card">
+      <h2>📊 종목별 수익률 <span style="font-size:0.75rem;font-weight:500;color:var(--text2);">TOP 10</span></h2>
+      <div class="chart-container" style="max-height:450px;min-height:320px;">
+        <canvas id="holdings-bar-chart"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <div class="two-col">
+    <div class="card">
+      <h2>💰 분기별 배당금 <span style="font-size:0.75rem;font-weight:500;color:var(--text2);">(부부 합산)</span></h2>
+      <div id="div-quarterly-total" style="text-align:center;font-size:1.3rem;font-weight:700;color:var(--primary);margin:8px 0;"></div>
+      <div class="chart-container" style="max-height:400px;">
+        <canvas id="dividend-quarterly-chart"></canvas>
+      </div>
+    </div>
+    <div class="card">
+      <h2>📅 월별 배당금 <span style="font-size:0.75rem;font-weight:500;color:var(--text2);">(부부 합산)</span></h2>
+      <div id="div-monthly-total" style="text-align:center;font-size:1.3rem;font-weight:700;color:var(--primary);margin:8px 0;"></div>
+      <div class="chart-container" style="max-height:400px;">
+        <canvas id="dividend-monthly-chart"></canvas>
+      </div>
+    </div>
+  </div>
+  <div class="app-footer" id="footer-tab3"></div>
+</div>
+
+<!-- ===== 탭 4: 설정 ===== -->
+<div id="tab-settings" class="tab-content">
+
+  <div class="card">
+    <h2>👤 본인 프로필</h2>
+    <div class="form-grid">
+      <div class="form-group">
+        <label>이름</label>
+        <input type="text" id="set-owner-name" placeholder="예: 홍길동">
+      </div>
+      <div class="form-group">
+        <label>별명</label>
+        <input type="text" id="set-owner-nickname" placeholder="예: 쫑아빠">
+      </div>
+      <div class="form-group">
+        <label>성별</label>
+        <select id="set-owner-gender">
+          <option value="male">남성 👨</option>
+          <option value="female">여성 👩</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>출생연도</label>
+        <input type="number" id="set-owner-birthyear" value="1970" min="1940" max="2010" step="1">
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>👫 배우자 프로필</h2>
+    <div class="form-grid">
+      <div class="form-group">
+        <label>이름</label>
+        <input type="text" id="set-spouse-name" placeholder="예: 김영희">
+      </div>
+      <div class="form-group">
+        <label>별명</label>
+        <input type="text" id="set-spouse-nickname" placeholder="예: 사자">
+      </div>
+      <div class="form-group">
+        <label>성별</label>
+        <select id="set-spouse-gender">
+          <option value="male">남성 👨</option>
+          <option value="female">여성 👩</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>출생연도</label>
+        <input type="number" id="set-spouse-birthyear" value="1972" min="1940" max="2010" step="1">
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>⚙️ 기본 설정</h2>
+    <div class="form-grid">
+      <div class="form-group">
+        <label>은퇴 예정 연도</label>
+        <input type="number" id="set-retireyear" value="2029" min="2024" max="2060" step="1">
+      </div>
+      <div class="form-group">
+        <label>물가상승률 (%)</label>
+        <input type="number" id="set-inflation" value="2.0" step="0.1">
+      </div>
+      <div class="form-group">
+        <label>배당 성장률 (%)</label>
+        <input type="number" id="set-divgrowth" value="2.5" step="0.1">
+      </div>
+      <div class="form-group">
+        <label>연금소득세율 (%)</label>
+        <input type="number" id="set-pensiontax" value="3.3" step="0.1">
+      </div>
+      <div class="form-group">
+        <label>배당소득세율 (%)</label>
+        <input type="number" id="set-divtax" value="15.4" step="0.1">
+      </div>
+    </div>
+    <div class="btn-group">
+      <button class="btn btn-primary" onclick="saveSettings()">설정 저장</button>
+    </div>
+  </div>
+
+  <!-- 데이터 관리 -->
+  <div class="card">
+    <h2>💾 데이터 관리</h2>
+    <div style="font-size:0.85rem; line-height:1.6; color:var(--text2); margin-bottom:16px;">
+      모든 데이터는 <strong style="color:var(--text);">브라우저 LocalStorage</strong>에 자동 저장됩니다.<br>
+      브라우저 캐시 삭제 시 데이터가 사라질 수 있으므로, <strong style="color:var(--primary);">정기적인 백업을 권장</strong>합니다.
+    </div>
+
+    <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(280px, 1fr)); gap:12px;">
+      <!-- 백업 -->
+      <div style="border:1px solid var(--border); border-radius:10px; padding:16px; background:var(--primary-light);">
+        <div style="font-weight:700; font-size:0.95rem; margin-bottom:6px;">📤 데이터 백업 (내보내기)</div>
+        <div style="font-size:0.8rem; color:var(--text2); margin-bottom:12px; line-height:1.5;">
+          현재 입력된 모든 데이터를 JSON 파일로 다운로드합니다.<br>
+          파일명 예시: <code style="font-size:0.75rem; background:var(--border); padding:1px 5px; border-radius:3px;">은퇴자산관리_2026-02-27.json</code>
+        </div>
+        <button class="btn btn-primary btn-sm" onclick="exportData()" style="width:100%;">📤 데이터 내보내기 (JSON)</button>
+      </div>
+
+      <!-- 복원 -->
+      <div style="border:1px solid var(--border); border-radius:10px; padding:16px;">
+        <div style="font-weight:700; font-size:0.95rem; margin-bottom:6px;">📥 데이터 복원 (가져오기)</div>
+        <div style="font-size:0.8rem; color:var(--text2); margin-bottom:12px; line-height:1.5;">
+          이전에 백업한 JSON 파일을 불러와 데이터를 복원합니다.<br>
+          기존 데이터에 <strong>덮어쓰기</strong> 되므로 주의하세요.
+        </div>
+        <button class="btn btn-accent btn-sm" onclick="document.getElementById('import-file').click()" style="width:100%;">📥 JSON 파일 선택</button>
+        <input type="file" id="import-file" accept=".json" style="display:none" onchange="importData(event)">
+      </div>
+
+      <!-- 초기화 -->
+      <div style="border:1px solid var(--danger); border-radius:10px; padding:16px; background:rgba(239,68,68,0.04);">
+        <div style="font-weight:700; font-size:0.95rem; margin-bottom:6px; color:var(--danger);">🗑️ 전체 초기화</div>
+        <div style="font-size:0.8rem; color:var(--text2); margin-bottom:12px; line-height:1.5;">
+          모든 데이터를 삭제하고 초기 상태로 되돌립니다.<br>
+          <strong style="color:var(--danger);">이 작업은 되돌릴 수 없습니다!</strong> 반드시 백업 후 실행하세요.
+        </div>
+        <button class="btn btn-danger btn-sm" onclick="resetAllData()" style="width:100%;">🗑️ 전체 초기화</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 사용 안내 -->
+  <div class="card">
+    <h2>📖 사용 안내</h2>
+
+    <!-- 시작하기 -->
+    <div style="background:var(--primary-light); border-radius:10px; padding:16px; margin-bottom:16px; border-left:4px solid var(--primary);">
+      <div style="font-weight:700; font-size:0.95rem; margin-bottom:8px;">🚀 처음 사용하시나요?</div>
+      <div style="font-size:0.83rem; line-height:1.7; color:var(--text2);">
+        <strong style="color:var(--text);">1단계:</strong> 이 <strong>설정 탭</strong>에서 본인/배우자 프로필과 은퇴 예정 연도를 먼저 입력하세요.<br>
+        <strong style="color:var(--text);">2단계:</strong> <strong>월 현금 흐름</strong> 탭에서 연금, 투자수입, 지출을 입력하면 나이별 현금흐름이 자동 계산됩니다.<br>
+        <strong style="color:var(--text);">3단계:</strong> <strong>자산 포트폴리오</strong> 탭에서 보유 자산을 카테고리별로 등록합니다.<br>
+        <strong style="color:var(--text);">4단계:</strong> <strong>계좌별 포트폴리오</strong> 탭에서 투자 계좌와 보유 종목을 관리합니다.
+      </div>
+    </div>
+
+    <!-- 탭별 기능 안내 -->
+    <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(280px, 1fr)); gap:12px; margin-bottom:16px;">
+
+      <div style="border:1px solid var(--border); border-radius:10px; padding:14px;">
+        <div style="font-weight:700; font-size:0.92rem; margin-bottom:8px;">💰 월 현금 흐름</div>
+        <ul style="font-size:0.8rem; color:var(--text2); line-height:1.7; margin:0; padding-left:18px;">
+          <li><strong>수입원 관리</strong> — 연금(국민연금, 퇴직연금 등), 투자수입, 기타수입을 등록</li>
+          <li><strong>지출 관리</strong> — 생활비, 보험, 여가 등 고정/변동 지출 입력</li>
+          <li><strong>나이별 현금흐름</strong> — 수입과 지출의 차이를 연령대별로 자동 시뮬레이션</li>
+          <li><strong>물가상승률 반영</strong> — 설정한 물가상승률에 따라 미래 금액 자동 보정</li>
+        </ul>
+      </div>
+
+      <div style="border:1px solid var(--border); border-radius:10px; padding:14px;">
+        <div style="font-weight:700; font-size:0.92rem; margin-bottom:8px;">📊 자산 포트폴리오</div>
+        <ul style="font-size:0.8rem; color:var(--text2); line-height:1.7; margin:0; padding-left:18px;">
+          <li><strong>자산 등록</strong> — 부동산, 금융자산, 연금, 기타자산 등을 카테고리별로 입력</li>
+          <li><strong>자산 비율 차트</strong> — 전체 자산 배분을 도넛 차트로 시각화</li>
+          <li><strong>목표 자산 설정</strong> — 은퇴 자금 목표 대비 현재 달성률 확인</li>
+        </ul>
+      </div>
+
+      <div style="border:1px solid var(--border); border-radius:10px; padding:14px;">
+        <div style="font-weight:700; font-size:0.92rem; margin-bottom:8px;">📋 계좌별 포트폴리오</div>
+        <ul style="font-size:0.8rem; color:var(--text2); line-height:1.7; margin:0; padding-left:18px;">
+          <li><strong>계좌 관리</strong> — 연금저축, IRP, 해외주식 등 투자 계좌 등록</li>
+          <li><strong>종목 관리</strong> — 보유 종목의 매수단가, 수량, 배당률 입력</li>
+          <li><strong>현재가 갱신</strong> — 종목코드 입력 시 실시간 현재가를 자동 조회
+            <br><span style="color:var(--primary);font-size:0.75rem;">한국주식: 종목코드(360750) / 미국주식: 티커(TSLA) / 암호화폐: C:티커(C:BTC)</span></li>
+          <li><strong>수익률·배당 차트</strong> — 종목별 수익률, 분기별·월별 배당금 시각화</li>
+        </ul>
+      </div>
+
+      <div style="border:1px solid var(--border); border-radius:10px; padding:14px;">
+        <div style="font-weight:700; font-size:0.92rem; margin-bottom:8px;">⚙️ 설정</div>
+        <ul style="font-size:0.8rem; color:var(--text2); line-height:1.7; margin:0; padding-left:18px;">
+          <li><strong>프로필</strong> — 본인/배우자 이름, 출생연도 설정</li>
+          <li><strong>기본 설정</strong> — 은퇴연도, 물가상승률, 배당성장률, 세율 조정</li>
+          <li><strong>데이터 관리</strong> — JSON 백업/복원, 전체 초기화</li>
+          <li><strong>다크모드</strong> — 우측 상단 🌙/☀️ 버튼으로 전환</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- 알아두면 좋은 팁 -->
+    <div style="background:rgba(16,185,129,0.06); border-radius:10px; padding:14px; border-left:4px solid var(--accent);">
+      <div style="font-weight:700; font-size:0.92rem; margin-bottom:8px;">💡 알아두면 좋은 팁</div>
+      <ul style="font-size:0.8rem; color:var(--text2); line-height:1.8; margin:0; padding-left:18px;">
+        <li>데이터는 브라우저에 자동 저장되므로 별도 저장 버튼을 누르지 않아도 됩니다.</li>
+        <li>단, <strong>브라우저 캐시를 삭제하면 데이터가 사라지므로</strong> 정기적으로 JSON 백업을 해두세요.</li>
+        <li>다른 기기에서 사용하려면, JSON 파일을 내보내기 후 다른 기기에서 가져오기 하면 됩니다.</li>
+        <li>현재가 갱신은 <strong>종목코드가 입력된 종목만</strong> 자동 조회됩니다 (종목 수정에서 코드 입력).</li>
+      </ul>
+    </div>
+  </div>
+  <div class="app-footer" id="footer-tab4"></div>
+</div>
+
+<!-- Modal -->
+<div class="modal-overlay" id="modal-overlay" onclick="closeModal(event)">
+  <div class="modal" id="modal-content" onclick="event.stopPropagation()"></div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<script>
+// ========== 전역 상태 ==========
+let appData = {
+  settings: {
+    birth: '1970-04',
+    inflationRate: 2.0,
+    dividendGrowthRate: 2.5,
+    pensionTaxRate: 3.3,
+    dividendTaxRate: 15.4,
+    retireYear: 2029,
+    owner: { name: '', nickname: '', gender: 'male', birthYear: 1970 },
+    spouse: { name: '', nickname: '', gender: 'female', birthYear: 1972 }
+  },
+  incomes: [],
+  expenses: [],
+  assets: [],
+  accounts: [],
+  currentAccountIdx: -1
+};
+
+let charts = {};
+
+// ========== 유틸리티 ==========
+function formatNum(n) {
+  if (n === undefined || n === null || isNaN(n)) return '0';
+  if (Number.isInteger(n) || Math.abs(n) >= 100) return Math.round(n).toLocaleString('ko-KR');
+  return n.toLocaleString('ko-KR', { minimumFractionDigits: 0, maximumFractionDigits: 1 });
+}
+function formatManWon(n) {
+  if (n === undefined || n === null || isNaN(n)) return '0만원';
+  const abs = Math.abs(n);
+  const sign = n < 0 ? '-' : '';
+  if (abs >= 10000) {
+    const eok = Math.floor(abs / 10000);
+    const man = Math.round(abs % 10000);
+    if (man === 0) return `${sign}${eok.toLocaleString('ko-KR')}억원`;
+    return `${sign}${eok.toLocaleString('ko-KR')}억 ${man.toLocaleString('ko-KR')}만원`;
+  }
+  return `${sign}${formatNum(abs)}만원`;
+}
+function formatPercent(n) {
+  if (isNaN(n) || !isFinite(n)) return '0.0%';
+  return (n >= 0 ? '+' : '') + n.toFixed(1) + '%';
+}
+function getBirthYear() {
+  return parseInt(appData.settings.birth.split('-')[0]);
+}
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2500);
+}
+function saveData() {
+  localStorage.setItem('retireApp', JSON.stringify(appData));
+}
+function loadData() {
+  const d = localStorage.getItem('retireApp');
+  if (d) {
+    try {
+      const parsed = JSON.parse(d);
+      appData = { ...appData, ...parsed };
+      appData.settings = { ...appData.settings, ...(parsed.settings || {}) };
+    } catch(e) { console.error(e); }
+  }
+}
+
+// ========== 테마 ==========
+function toggleTheme() {
+  document.body.classList.toggle('dark');
+  const btn = document.querySelector('.theme-toggle');
+  btn.textContent = document.body.classList.contains('dark') ? '☀️' : '🌙';
+  localStorage.setItem('theme', document.body.classList.contains('dark') ? 'dark' : 'light');
+  Object.values(charts).forEach(c => { if(c) c.update(); });
+}
+
+// ========== 탭 전환 ==========
+function switchTab(name) {
+  document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.tab-nav button').forEach(b => b.classList.remove('active'));
+  document.getElementById('tab-' + name).classList.add('active');
+  const btns = document.querySelectorAll('.tab-nav button');
+  const idx = ['cashflow','portfolio','accounts','settings'].indexOf(name);
+  if (idx >= 0) btns[idx].classList.add('active');
+
+  if (name === 'cashflow') calculateCashflow();
+  if (name === 'portfolio') renderAssets();
+  if (name === 'accounts') renderAccounts();
+}
+
+// ========== 모달 ==========
+function openModal(html) {
+  document.getElementById('modal-content').innerHTML = html;
+  document.getElementById('modal-overlay').classList.add('show');
+}
+function closeModal(e) {
+  if (e && e.target !== document.getElementById('modal-overlay')) return;
+  document.getElementById('modal-overlay').classList.remove('show');
+}
+function closeModalForce() {
+  document.getElementById('modal-overlay').classList.remove('show');
+}
+
+// ===================================================================
+//  탭 1: 월 현금 흐름
+// ===================================================================
+
+function addIncome(type) {
+  const typeLabels = { pension: '연금', investment: '투자수입', other: '기타수입' };
+  const typeLabel = typeLabels[type] || '수입';
+
+  let extraFields = '';
+  if (type === 'pension') {
+    extraFields = `
+      <div class="form-group">
+        <label>소유자</label>
+        <select id="mi-owner"><option value="본인">본인</option><option value="배우자">배우자</option></select>
+      </div>
+      <div class="form-group">
+        <label>연금기관</label>
+        <input type="text" id="mi-provider" placeholder="예: 사학연금, 미래에셋증권">
+      </div>
+      <div class="form-group">
+        <label>상품명</label>
+        <input type="text" id="mi-product" placeholder="예: 퇴직연금">
+      </div>
+      <div class="form-group">
+        <label>수령시작 연도</label>
+        <input type="number" id="mi-start" value="2030" min="2024" max="2060">
+      </div>
+      <div class="form-group">
+        <label>수령종료 연도</label>
+        <input type="number" id="mi-end" value="2050" min="2024" max="2070">
+      </div>
+      <div class="form-group">
+        <label>월 수령액 (만원)</label>
+        <input type="number" id="mi-amount" value="0" step="0.1">
+      </div>
+      <div class="form-group">
+        <label>연간 인상률 (%)</label>
+        <input type="number" id="mi-growth" value="1.0" step="0.1">
+      </div>
+    `;
+  } else if (type === 'investment') {
+    extraFields = `
+      <div class="form-group">
+        <label>소유자</label>
+        <select id="mi-owner"><option value="본인">본인</option><option value="배우자">배우자</option></select>
+      </div>
+      <div class="form-group">
+        <label>계좌/출처</label>
+        <input type="text" id="mi-provider" placeholder="예: ISA, 배당계좌">
+      </div>
+      <div class="form-group">
+        <label>설명</label>
+        <input type="text" id="mi-product" placeholder="예: 월배당 ETF 수익">
+      </div>
+      <div class="form-group">
+        <label>수령시작 연도</label>
+        <input type="number" id="mi-start" value="2026" min="2024" max="2060">
+      </div>
+      <div class="form-group">
+        <label>수령종료 연도</label>
+        <input type="number" id="mi-end" value="2055" min="2024" max="2070">
+      </div>
+      <div class="form-group">
+        <label>월 수령액 (만원)</label>
+        <input type="number" id="mi-amount" value="0" step="0.1">
+      </div>
+      <div class="form-group">
+        <label>연간 성장률 (%)</label>
+        <input type="number" id="mi-growth" value="2.5" step="0.1">
+      </div>
+    `;
+  } else {
+    extraFields = `
+      <div class="form-group">
+        <label>설명</label>
+        <input type="text" id="mi-product" placeholder="예: 임대수입">
+      </div>
+      <div class="form-group">
+        <label>시작 연도</label>
+        <input type="number" id="mi-start" value="2026" min="2024" max="2060">
+      </div>
+      <div class="form-group">
+        <label>종료 연도</label>
+        <input type="number" id="mi-end" value="2055" min="2024" max="2070">
+      </div>
+      <div class="form-group">
+        <label>월 금액 (만원)</label>
+        <input type="number" id="mi-amount" value="0" step="0.1">
+      </div>
+      <div class="form-group">
+        <label>연간 성장률 (%)</label>
+        <input type="number" id="mi-growth" value="0" step="0.1">
+      </div>
+    `;
+  }
+
+  openModal(`
+    <h3>${typeLabel} 추가</h3>
+    <div class="form-grid">${extraFields}</div>
+    <div class="btn-group">
+      <button class="btn btn-primary" onclick="saveIncome('${type}', -1)">저장</button>
+      <button class="btn btn-danger" onclick="closeModalForce()">취소</button>
+    </div>
+  `);
+}
+
+function editIncome(idx) {
+  const inc = appData.incomes[idx];
+  const type = inc.type;
+  const typeLabels = { pension: '연금', investment: '투자수입', other: '기타수입' };
+  const typeLabel = typeLabels[type] || '수입';
+  const ownerSelect = `<div class="form-group"><label>소유자</label><select id="mi-owner"><option value="본인" ${inc.owner === '본인' ? 'selected' : ''}>본인</option><option value="배우자" ${inc.owner === '배우자' ? 'selected' : ''}>배우자</option></select></div>`;
+
+  let extraFields = '';
+  if (type === 'pension') {
+    extraFields = `
+      ${ownerSelect}
+      <div class="form-group"><label>연금기관</label><input type="text" id="mi-provider" value="${inc.provider || ''}"></div>
+      <div class="form-group"><label>상품명</label><input type="text" id="mi-product" value="${inc.product || ''}"></div>
+      <div class="form-group"><label>수령시작 연도</label><input type="number" id="mi-start" value="${inc.startYear}" min="2024" max="2060"></div>
+      <div class="form-group"><label>수령종료 연도</label><input type="number" id="mi-end" value="${inc.endYear}" min="2024" max="2070"></div>
+      <div class="form-group"><label>월 수령액 (만원)</label><input type="number" id="mi-amount" value="${inc.monthlyAmount}" step="0.1"></div>
+      <div class="form-group"><label>연간 인상률 (%)</label><input type="number" id="mi-growth" value="${inc.growthRate}" step="0.1"></div>`;
+  } else if (type === 'investment') {
+    extraFields = `
+      ${ownerSelect}
+      <div class="form-group"><label>계좌/출처</label><input type="text" id="mi-provider" value="${inc.provider || ''}"></div>
+      <div class="form-group"><label>설명</label><input type="text" id="mi-product" value="${inc.product || ''}"></div>
+      <div class="form-group"><label>수령시작 연도</label><input type="number" id="mi-start" value="${inc.startYear}" min="2024" max="2060"></div>
+      <div class="form-group"><label>수령종료 연도</label><input type="number" id="mi-end" value="${inc.endYear}" min="2024" max="2070"></div>
+      <div class="form-group"><label>월 수령액 (만원)</label><input type="number" id="mi-amount" value="${inc.monthlyAmount}" step="0.1"></div>
+      <div class="form-group"><label>연간 성장률 (%)</label><input type="number" id="mi-growth" value="${inc.growthRate}" step="0.1"></div>`;
+  } else {
+    extraFields = `
+      <div class="form-group"><label>설명</label><input type="text" id="mi-product" value="${inc.product || ''}"></div>
+      <div class="form-group"><label>시작 연도</label><input type="number" id="mi-start" value="${inc.startYear}" min="2024" max="2060"></div>
+      <div class="form-group"><label>종료 연도</label><input type="number" id="mi-end" value="${inc.endYear}" min="2024" max="2070"></div>
+      <div class="form-group"><label>월 금액 (만원)</label><input type="number" id="mi-amount" value="${inc.monthlyAmount}" step="0.1"></div>
+      <div class="form-group"><label>연간 성장률 (%)</label><input type="number" id="mi-growth" value="${inc.growthRate}" step="0.1"></div>`;
+  }
+
+  openModal(`
+    <h3>${typeLabel} 수정</h3>
+    <div class="form-grid">${extraFields}</div>
+    <div class="btn-group">
+      <button class="btn btn-primary" onclick="saveIncome('${type}', ${idx})">저장</button>
+      <button class="btn btn-danger" onclick="closeModalForce()">취소</button>
+    </div>
+  `);
+}
+
+function saveIncome(type, idx) {
+  const income = {
+    type,
+    owner: document.getElementById('mi-owner')?.value || '본인',
+    provider: document.getElementById('mi-provider')?.value || '',
+    product: document.getElementById('mi-product')?.value || '',
+    startYear: parseInt(document.getElementById('mi-start').value),
+    endYear: parseInt(document.getElementById('mi-end').value),
+    monthlyAmount: parseFloat(document.getElementById('mi-amount').value) || 0,
+    growthRate: parseFloat(document.getElementById('mi-growth').value) || 0
+  };
+  if (idx !== undefined && idx >= 0) {
+    appData.incomes[idx] = income;
+  } else {
+    appData.incomes.push(income);
+  }
+  saveData();
+  renderIncomes();
+  closeModalForce();
+  showToast(idx >= 0 ? '수입원이 수정되었습니다' : '수입원이 추가되었습니다');
+}
+
+function renderIncomes() {
+  const container = document.getElementById('income-list');
+  if (appData.incomes.length === 0) {
+    container.innerHTML = '<p style="color:var(--text2); font-size:0.9rem; padding:12px;">등록된 수입원이 없습니다. 위 버튼을 눌러 추가하세요.</p>';
+    return;
+  }
+  const typeColors = { pension: '#3b82f6', investment: '#10b981', other: '#f59e0b' };
+  const typeLabels = { pension: '연금', investment: '투자수입', other: '기타' };
+  container.innerHTML = appData.incomes.map((inc, i) => `
+    <div class="income-item editable" onclick="editIncome(${i})" style="border-left: 4px solid ${typeColors[inc.type] || '#999'}">
+      <button class="delete-btn" onclick="event.stopPropagation(); deleteIncome(${i})" title="삭제">&times;</button>
+      <div style="display:flex;gap:16px;flex-wrap:wrap;align-items:center;">
+        <span style="background:${typeColors[inc.type]};color:white;padding:2px 8px;border-radius:4px;font-size:0.75rem;">${typeLabels[inc.type]}</span>
+        <strong>${inc.owner || ''} ${inc.provider || ''} ${inc.product || ''}</strong>
+        <span style="color:var(--text2);font-size:0.85rem;">${inc.startYear}~${inc.endYear}년</span>
+        <span style="font-weight:600;">월 ${formatNum(inc.monthlyAmount)}만원</span>
+        <span style="color:var(--text2);font-size:0.82rem;">연 ${inc.growthRate}% 인상</span>
+      </div>
+    </div>
+  `).join('');
+}
+
+function deleteIncome(idx) {
+  appData.incomes.splice(idx, 1);
+  saveData();
+  renderIncomes();
+  showToast('수입원이 삭제되었습니다');
+}
+
+// 지출
+function addExpense() {
+  openModal(`
+    <h3>지출항목 추가</h3>
+    <div class="form-grid">
+      <div class="form-group">
+        <label>항목명</label>
+        <input type="text" id="me-name" placeholder="예: 생활비">
+      </div>
+      <div class="form-group">
+        <label>구분</label>
+        <select id="me-type"><option value="fixed">고정지출</option><option value="variable">변동지출</option></select>
+      </div>
+      <div class="form-group">
+        <label>월 금액 (만원)</label>
+        <input type="number" id="me-amount" value="0" step="0.1">
+      </div>
+      <div class="form-group">
+        <label>시작 연도</label>
+        <input type="number" id="me-start" value="2026" min="2024" max="2060">
+      </div>
+      <div class="form-group">
+        <label>종료 연도</label>
+        <input type="number" id="me-end" value="2060" min="2024" max="2070">
+      </div>
+      <div class="form-group">
+        <label>연간 인상률 (%)</label>
+        <input type="number" id="me-growth" value="2.0" step="0.1">
+      </div>
+    </div>
+    <div class="btn-group">
+      <button class="btn btn-primary" onclick="saveExpense(-1)">저장</button>
+      <button class="btn btn-danger" onclick="closeModalForce()">취소</button>
+    </div>
+  `);
+}
+
+function editExpense(idx) {
+  const exp = appData.expenses[idx];
+  openModal(`
+    <h3>지출항목 수정</h3>
+    <div class="form-grid">
+      <div class="form-group">
+        <label>항목명</label>
+        <input type="text" id="me-name" value="${exp.name}">
+      </div>
+      <div class="form-group">
+        <label>구분</label>
+        <select id="me-type"><option value="fixed" ${exp.type === 'fixed' ? 'selected' : ''}>고정지출</option><option value="variable" ${exp.type === 'variable' ? 'selected' : ''}>변동지출</option></select>
+      </div>
+      <div class="form-group">
+        <label>월 금액 (만원)</label>
+        <input type="number" id="me-amount" value="${exp.monthlyAmount}" step="0.1">
+      </div>
+      <div class="form-group">
+        <label>시작 연도</label>
+        <input type="number" id="me-start" value="${exp.startYear}" min="2024" max="2060">
+      </div>
+      <div class="form-group">
+        <label>종료 연도</label>
+        <input type="number" id="me-end" value="${exp.endYear}" min="2024" max="2070">
+      </div>
+      <div class="form-group">
+        <label>연간 인상률 (%)</label>
+        <input type="number" id="me-growth" value="${exp.growthRate}" step="0.1">
+      </div>
+    </div>
+    <div class="btn-group">
+      <button class="btn btn-primary" onclick="saveExpense(${idx})">저장</button>
+      <button class="btn btn-danger" onclick="closeModalForce()">취소</button>
+    </div>
+  `);
+}
+
+function saveExpense(idx) {
+  const expense = {
+    name: document.getElementById('me-name').value || '지출',
+    type: document.getElementById('me-type').value,
+    monthlyAmount: parseFloat(document.getElementById('me-amount').value) || 0,
+    startYear: parseInt(document.getElementById('me-start').value),
+    endYear: parseInt(document.getElementById('me-end').value),
+    growthRate: parseFloat(document.getElementById('me-growth').value) || 0
+  };
+  if (idx !== undefined && idx >= 0) {
+    appData.expenses[idx] = expense;
+  } else {
+    appData.expenses.push(expense);
+  }
+  saveData();
+  renderExpenses();
+  closeModalForce();
+  showToast(idx >= 0 ? '지출항목이 수정되었습니다' : '지출항목이 추가되었습니다');
+}
+
+function renderExpenses() {
+  const container = document.getElementById('expense-list');
+  if (appData.expenses.length === 0) {
+    container.innerHTML = '<p style="color:var(--text2); font-size:0.9rem; padding:12px;">등록된 지출이 없습니다.</p>';
+    return;
+  }
+  container.innerHTML = appData.expenses.map((exp, i) => `
+    <div class="income-item editable" onclick="editExpense(${i})" style="border-left: 4px solid ${exp.type === 'fixed' ? '#ef4444' : '#f59e0b'}">
+      <button class="delete-btn" onclick="event.stopPropagation(); deleteExpense(${i})" title="삭제">&times;</button>
+      <div style="display:flex;gap:16px;flex-wrap:wrap;align-items:center;">
+        <span style="background:${exp.type === 'fixed' ? '#ef4444' : '#f59e0b'};color:white;padding:2px 8px;border-radius:4px;font-size:0.75rem;">${exp.type === 'fixed' ? '고정' : '변동'}</span>
+        <strong>${exp.name}</strong>
+        <span style="color:var(--text2);font-size:0.85rem;">${exp.startYear}~${exp.endYear}년</span>
+        <span style="font-weight:600;">월 ${formatNum(exp.monthlyAmount)}만원</span>
+      </div>
+    </div>
+  `).join('');
+}
+
+function deleteExpense(idx) {
+  appData.expenses.splice(idx, 1);
+  saveData();
+  renderExpenses();
+  showToast('지출항목이 삭제되었습니다');
+}
+
+function renderProfileBanner() {
+  const o = appData.settings.owner || {};
+  const s = appData.settings.spouse || {};
+  const thisYear = new Date().getFullYear();
+  const oAge = o.birthYear ? thisYear - o.birthYear : '';
+  const sAge = s.birthYear ? thisYear - s.birthYear : '';
+  const oIcon = o.gender === 'female' ? '👩' : '👨';
+  const sIcon = s.gender === 'female' ? '👩' : '👨';
+  const oGenderLabel = o.gender === 'female' ? '여' : '남';
+  const sGenderLabel = s.gender === 'female' ? '여' : '남';
+  const oColor = o.gender === 'female' ? '#ec4899' : '#3b82f6';
+  const sColor = s.gender === 'female' ? '#ec4899' : '#3b82f6';
+
+  const oDisplay = o.nickname || o.name || '본인';
+  const sDisplay = s.nickname || s.name || '배우자';
+
+  document.getElementById('profile-banner').innerHTML = `
+    <div class="profile-card">
+      <div class="profile-avatar" style="background:${oColor}20;color:${oColor};">${oIcon}</div>
+      <div class="profile-info">
+        <div class="p-nickname">${oDisplay}</div>
+        ${o.name && o.nickname ? `<div class="p-name">${o.name}</div>` : ''}
+        <div class="p-detail">
+          <span>${oGenderLabel}</span>
+          ${oAge ? `<span>${oAge}세 (${o.birthYear}년생)</span>` : ''}
+        </div>
+      </div>
+    </div>
+    <div class="profile-card">
+      <div class="profile-avatar" style="background:${sColor}20;color:${sColor};">${sIcon}</div>
+      <div class="profile-info">
+        <div class="p-nickname">${sDisplay}</div>
+        ${s.name && s.nickname ? `<div class="p-name">${s.name}</div>` : ''}
+        <div class="p-detail">
+          <span>${sGenderLabel}</span>
+          ${sAge ? `<span>${sAge}세 (${s.birthYear}년생)</span>` : ''}
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+// 현금 흐름 계산
+function calculateCashflow() {
+  renderProfileBanner();
+  const birthYear = getBirthYear();
+  const retireYear = appData.settings.retireYear || 2029;
+  const startAge = retireYear - birthYear;
+  const endAge = 90;
+  const ages = [];
+  for (let a = startAge; a <= endAge; a++) ages.push(a);
+
+  // 세율 설정
+  const pensionTaxRate = (appData.settings.pensionTaxRate || 3.3) / 100;
+  const dividendTaxRate = (appData.settings.dividendTaxRate || 15.4) / 100;
+
+  // 수입원별로 각 연령의 월 금액 계산 (세후)
+  const incomeLabels = appData.incomes.map(inc =>
+    `${inc.owner || ''} ${inc.provider || ''} ${inc.product || ''}`.trim() || '수입'
+  );
+  const incomeDatasets = appData.incomes.map(inc => {
+    // 수입 유형별 세율 적용: 연금 → 연금소득세, 투자수입 → 배당소득세, 기타 → 세금 없음
+    const taxRate = inc.type === 'pension' ? pensionTaxRate :
+                    inc.type === 'investment' ? dividendTaxRate : 0;
+    return ages.map(age => {
+      const year = birthYear + age;
+      if (year < inc.startYear || year > inc.endYear) return 0;
+      const yearsFromStart = year - inc.startYear;
+      const gross = inc.monthlyAmount * Math.pow(1 + inc.growthRate / 100, yearsFromStart);
+      return gross * (1 - taxRate);
+    });
+  });
+
+  // 지출
+  const totalExpenseByAge = ages.map(age => {
+    const year = birthYear + age;
+    return appData.expenses.reduce((sum, exp) => {
+      if (year < exp.startYear || year > exp.endYear) return sum;
+      const yearsFromStart = year - exp.startYear;
+      return sum + exp.monthlyAmount * Math.pow(1 + exp.growthRate / 100, yearsFromStart);
+    }, 0);
+  });
+
+  const totalIncomeByAge = ages.map((_, i) =>
+    incomeDatasets.reduce((sum, ds) => sum + ds[i], 0)
+  );
+  const netByAge = ages.map((_, i) => totalIncomeByAge[i] - totalExpenseByAge[i]);
+
+  // 요약 카드
+  const currentAge = new Date().getFullYear() - birthYear;
+  const closestIdx = ages.indexOf(currentAge >= startAge ? currentAge : startAge);
+
+  // 은퇴 시작 나이 + 60세부터 5년 단위로 80세까지
+  const agePoints = [
+    { age: startAge, label: `${startAge}세 (은퇴)`, idx: ages.indexOf(startAge) }
+  ];
+  for (let a = 60; a <= 80; a += 5) {
+    if (a > startAge) {
+      const idx = ages.indexOf(a);
+      if (idx >= 0) agePoints.push({ age: a, label: `${a}세`, idx });
+    }
+  }
+
+  // 카드별 색상 배열 (양수/음수 각각 다른 색상)
+  const cardColorsPositive = ['teal', 'sky', 'emerald', 'purple', 'indigo', 'green', 'amber'];
+  const cardColorsNegative = ['red', 'rose', 'orange', 'red', 'rose', 'orange', 'red'];
+
+  let summaryHTML = '<h3 style="grid-column:1/-1;margin:0 0 4px;font-size:1.05rem;color:var(--accent);">📌 나이대별 월 현금흐름</h3>';
+  agePoints.forEach((p, cardIdx) => {
+    const net = netByAge[p.idx];
+    const colorClass = net >= 0 ? cardColorsPositive[cardIdx % cardColorsPositive.length] : cardColorsNegative[cardIdx % cardColorsNegative.length];
+    summaryHTML += `
+      <div class="summary-card ${colorClass}">
+        <div class="label">${p.label} 월 현금흐름</div>
+        <div class="value">${formatNum(net)}만원</div>
+        <div class="sub-label" style="font-size:0.78rem;color:var(--text-secondary);margin-top:2px;">수입 ${formatNum(totalIncomeByAge[p.idx])} / 지출 ${formatNum(totalExpenseByAge[p.idx])}</div>
+      </div>
+    `;
+  });
+  document.getElementById('cashflow-summary').innerHTML = summaryHTML;
+
+  // 스택바 차트
+  const colors = [
+    '#3b82f6','#10b981','#f59e0b','#ef4444','#8b5cf6',
+    '#ec4899','#06b6d4','#84cc16','#f97316','#6366f1',
+    '#14b8a6','#e11d48','#0ea5e9','#a855f7'
+  ];
+
+  const datasets = incomeDatasets.map((ds, i) => ({
+    label: incomeLabels[i],
+    data: ds.map(v => Math.round(v)),
+    backgroundColor: colors[i % colors.length],
+    stack: 'income'
+  }));
+  datasets.push({
+    label: '지출',
+    data: totalExpenseByAge.map(v => -Math.round(v)),
+    backgroundColor: '#ef4444',
+    stack: 'expense'
+  });
+
+  if (charts.cashflow) charts.cashflow.destroy();
+  charts.cashflow = new Chart(document.getElementById('cashflow-chart'), {
+    type: 'bar',
+    data: {
+      labels: ages.map(a => a + '세'),
+      datasets
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { position: 'bottom', labels: { font: { size: 11 }, boxWidth: 12 } },
+        tooltip: {
+          callbacks: {
+            label: ctx => `${ctx.dataset.label}: ${formatNum(Math.abs(ctx.raw))}만원`
+          }
+        }
+      },
+      scales: {
+        x: { stacked: true },
+        y: {
+          stacked: true,
+          ticks: { callback: v => formatNum(v) + '만원' }
+        }
+      }
+    }
+  });
+
+  // 순현금흐름 라인 차트
+  if (charts.netcashflow) charts.netcashflow.destroy();
+  charts.netcashflow = new Chart(document.getElementById('netcashflow-chart'), {
+    type: 'line',
+    data: {
+      labels: ages.map(a => a + '세'),
+      datasets: [
+        {
+          label: '월 수입',
+          data: totalIncomeByAge.map(v => Math.round(v)),
+          borderColor: '#3b82f6',
+          backgroundColor: 'rgba(59,130,246,0.1)',
+          fill: true,
+          tension: 0.3
+        },
+        {
+          label: '월 지출',
+          data: totalExpenseByAge.map(v => Math.round(v)),
+          borderColor: '#ef4444',
+          backgroundColor: 'rgba(239,68,68,0.1)',
+          fill: true,
+          tension: 0.3
+        },
+        {
+          label: '월 현금흐름',
+          data: netByAge.map(v => Math.round(v)),
+          borderColor: '#10b981',
+          borderWidth: 3,
+          borderDash: [5, 5],
+          fill: false,
+          tension: 0.3
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { position: 'bottom' },
+        tooltip: { callbacks: { label: ctx => `${ctx.dataset.label}: ${formatNum(ctx.raw)}만원` } }
+      },
+      scales: {
+        y: { ticks: { callback: v => formatNum(v) + '만원' } }
+      }
+    }
+  });
+
+  // 테이블
+  const tableWrap = document.getElementById('cashflow-table-wrap');
+  let tableHTML = '<table><thead><tr><th>연령</th><th>연도</th>';
+  appData.incomes.forEach(inc => {
+    const line1 = inc.owner || '';
+    const line2 = `${inc.provider || ''} ${inc.product || ''}`.trim() || '수입';
+    tableHTML += `<th style="white-space:nowrap;line-height:1.4;"><span style="font-size:0.7rem;color:var(--primary);display:block;">${line1}</span>${line2}</th>`;
+  });
+  tableHTML += '<th>월 수입</th><th>월 지출</th><th>월 현금흐름</th></tr></thead><tbody>';
+  ages.forEach((age, i) => {
+    const year = birthYear + age;
+    tableHTML += `<tr><td>${age}세</td><td>${year}</td>`;
+    incomeDatasets.forEach(ds => {
+      tableHTML += `<td>${formatNum(ds[i])}</td>`;
+    });
+    const net = netByAge[i];
+    tableHTML += `<td style="font-weight:600;">${formatNum(totalIncomeByAge[i])}</td>`;
+    tableHTML += `<td class="num-negative">${formatNum(totalExpenseByAge[i])}</td>`;
+    tableHTML += `<td class="${net >= 0 ? 'num-positive' : 'num-negative'}">${formatNum(net)}</td>`;
+    tableHTML += '</tr>';
+  });
+  tableHTML += '</tbody></table>';
+  tableWrap.innerHTML = tableHTML;
+}
+
+// ===================================================================
+//  탭 2: 자산 포트폴리오
+// ===================================================================
+
+function addAsset() {
+  openModal(`
+    <h3>자산 추가</h3>
+    <div class="form-grid">
+      <div class="form-group">
+        <label>카테고리</label>
+        <select id="ma-cat">
+          <option value="사학연금">사학연금 (적립금)</option>
+          <option value="연금저축/IRP">연금저축/IRP</option>
+          <option value="ISA">ISA 계좌</option>
+          <option value="해외주식">해외주식</option>
+          <option value="국내주식/ETF">국내주식/ETF</option>
+          <option value="암호화폐">암호화폐 (비트코인 등)</option>
+          <option value="부동산">부동산</option>
+          <option value="예적금/현금">예적금/현금</option>
+          <option value="보험">보험</option>
+          <option value="기타">기타</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>자산명</label>
+        <input type="text" id="ma-name" placeholder="예: 미래에셋 연금저축">
+      </div>
+      <div class="form-group">
+        <label>금액 (만원)</label>
+        <input type="number" id="ma-amount" value="0" step="1">
+      </div>
+    </div>
+    <div class="btn-group">
+      <button class="btn btn-primary" onclick="saveAsset(-1)">저장</button>
+      <button class="btn btn-danger" onclick="closeModalForce()">취소</button>
+    </div>
+  `);
+}
+
+function editAsset(idx) {
+  const a = appData.assets[idx];
+  const categories = [
+    {v:'사학연금',l:'사학연금 (적립금)'},{v:'연금저축/IRP',l:'연금저축/IRP'},{v:'ISA',l:'ISA 계좌'},
+    {v:'해외주식',l:'해외주식'},{v:'국내주식/ETF',l:'국내주식/ETF'},{v:'암호화폐',l:'암호화폐 (비트코인 등)'},
+    {v:'부동산',l:'부동산'},{v:'예적금/현금',l:'예적금/현금'},{v:'보험',l:'보험'},{v:'기타',l:'기타'}
+  ];
+  const catOptions = categories.map(c => `<option value="${c.v}" ${a.category === c.v ? 'selected' : ''}>${c.l}</option>`).join('');
+  openModal(`
+    <h3>자산 수정</h3>
+    <div class="form-grid">
+      <div class="form-group">
+        <label>카테고리</label>
+        <select id="ma-cat">${catOptions}</select>
+      </div>
+      <div class="form-group">
+        <label>자산명</label>
+        <input type="text" id="ma-name" value="${a.name}">
+      </div>
+      <div class="form-group">
+        <label>금액 (만원)</label>
+        <input type="number" id="ma-amount" value="${a.amount}" step="1">
+      </div>
+    </div>
+    <div class="btn-group">
+      <button class="btn btn-primary" onclick="saveAsset(${idx})">저장</button>
+      <button class="btn btn-danger" onclick="closeModalForce()">취소</button>
+    </div>
+  `);
+}
+
+function saveAsset(idx) {
+  const asset = {
+    category: document.getElementById('ma-cat').value,
+    name: document.getElementById('ma-name').value || '자산',
+    amount: parseFloat(document.getElementById('ma-amount').value) || 0
+  };
+  if (idx !== undefined && idx >= 0) {
+    appData.assets[idx] = asset;
+  } else {
+    appData.assets.push(asset);
+  }
+  saveData();
+  renderAssets();
+  closeModalForce();
+  showToast(idx >= 0 ? '자산이 수정되었습니다' : '자산이 추가되었습니다');
+}
+
+function renderAssets() {
+  const container = document.getElementById('asset-list');
+  if (appData.assets.length === 0) {
+    container.innerHTML = '<p style="color:var(--text2); font-size:0.9rem; padding:12px;">등록된 자산이 없습니다.</p>';
+    updateAssetSummary(0);
+    if (charts.assetPie) { charts.assetPie.destroy(); charts.assetPie = null; }
+    document.getElementById('asset-breakdown').innerHTML = '';
+    document.getElementById('asset-date-label').textContent = '';
+    return;
+  }
+
+  const catColors = {
+    '사학연금': '#3b82f6', '연금저축/IRP': '#10b981', 'ISA': '#f59e0b',
+    '해외주식': '#8b5cf6', '국내주식/ETF': '#ec4899', '암호화폐': '#f7931a',
+    '부동산': '#06b6d4', '예적금/현금': '#84cc16', '보험': '#f97316', '기타': '#6366f1'
+  };
+
+  container.innerHTML = appData.assets.map((a, i) => `
+    <div class="income-item editable" onclick="editAsset(${i})" style="border-left: 4px solid ${catColors[a.category] || '#999'}">
+      <button class="delete-btn" onclick="event.stopPropagation(); deleteAsset(${i})" title="삭제">&times;</button>
+      <div style="display:flex;gap:16px;flex-wrap:wrap;align-items:center;">
+        <span style="background:${catColors[a.category] || '#999'};color:white;padding:2px 8px;border-radius:4px;font-size:0.75rem;">${a.category}</span>
+        <strong>${a.name}</strong>
+        <span style="font-weight:600;">${formatManWon(a.amount)}</span>
+      </div>
+    </div>
+  `).join('');
+
+  const total = appData.assets.reduce((s, a) => s + a.amount, 0);
+  updateAssetSummary(total);
+
+  // 카테고리별 합산
+  const catMap = {};
+  appData.assets.forEach(a => {
+    catMap[a.category] = (catMap[a.category] || 0) + a.amount;
+  });
+  const cats = Object.keys(catMap);
+  const vals = cats.map(c => catMap[c]);
+  const clrs = cats.map(c => catColors[c] || '#999');
+
+  // 도넛 차트 (퍼센트 직접 표시)
+  if (charts.assetPie) charts.assetPie.destroy();
+  const isDark = document.body.classList.contains('dark');
+  charts.assetPie = new Chart(document.getElementById('asset-pie-chart'), {
+    type: 'doughnut',
+    data: {
+      labels: cats,
+      datasets: [{ data: vals, backgroundColor: clrs, borderWidth: 2, borderColor: isDark ? '#1e293b' : '#ffffff' }]
+    },
+    plugins: [{
+      id: 'doughnutLabels',
+      afterDraw(chart) {
+        const ctx = chart.ctx;
+        const meta = chart.getDatasetMeta(0);
+        const ds = chart.data.datasets[0];
+        const totalVal = ds.data.reduce((s, v) => s + v, 0);
+        if (totalVal <= 0) return;
+        // 세그먼트 위 퍼센트
+        meta.data.forEach((arc, i) => {
+          const pct = (ds.data[i] / totalVal * 100);
+          if (pct < 3) return;
+          const { x, y } = arc.tooltipPosition();
+          const centerX = chart.chartArea.left + chart.chartArea.width / 2;
+          const centerY = chart.chartArea.top + chart.chartArea.height / 2;
+          const midX = centerX + (x - centerX) * 1.0;
+          const midY = centerY + (y - centerY) * 1.0;
+          ctx.save();
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.font = 'bold 12px sans-serif';
+          ctx.fillStyle = '#ffffff';
+          ctx.shadowColor = 'rgba(0,0,0,0.6)';
+          ctx.shadowBlur = 3;
+          ctx.fillText(pct.toFixed(1) + '%', midX, midY);
+          ctx.restore();
+        });
+        // 도넛 중앙에 총 자산 표시
+        const cX = chart.chartArea.left + chart.chartArea.width / 2;
+        const cY = chart.chartArea.top + chart.chartArea.height / 2;
+        const dk = document.body.classList.contains('dark');
+        ctx.save();
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.font = 'bold 11px sans-serif';
+        ctx.fillStyle = dk ? '#94a3b8' : '#64748b';
+        ctx.fillText('총 자산', cX, cY - 10);
+        ctx.font = 'bold 14px sans-serif';
+        ctx.fillStyle = dk ? '#e2e8f0' : '#1e293b';
+        ctx.fillText(formatManWon(totalVal), cX, cY + 10);
+        ctx.restore();
+      }
+    }],
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { position: 'bottom', labels: { font: { size: 11 }, boxWidth: 12, padding: 10 } },
+        tooltip: {
+          callbacks: {
+            label: ctx => {
+              const pct = total > 0 ? (ctx.raw / total * 100).toFixed(1) : 0;
+              return `${ctx.label}: ${formatManWon(ctx.raw)} (${pct}%)`;
+            }
+          }
+        }
+      }
+    }
+  });
+
+  // 자산 현황 테이블 (날짜 기준 + 카테고리별 항목 정리)
+  const now = new Date();
+  const dateStr = `${now.getFullYear()}년 ${now.getMonth()+1}월 ${now.getDate()}일 기준`;
+  document.getElementById('asset-date-label').textContent = dateStr;
+
+  // 카테고리별 개별 항목 그룹화 (금액 내림차순)
+  const catGroups = {};
+  appData.assets.forEach(a => {
+    if (!catGroups[a.category]) catGroups[a.category] = [];
+    catGroups[a.category].push(a);
+  });
+  // 카테고리 합산 금액 내림차순 정렬
+  const sortedCats = Object.keys(catGroups).sort((a, b) => {
+    const sumA = catGroups[a].reduce((s, x) => s + x.amount, 0);
+    const sumB = catGroups[b].reduce((s, x) => s + x.amount, 0);
+    return sumB - sumA;
+  });
+
+  let breakdownHTML = '';
+  sortedCats.forEach(cat => {
+    const items = catGroups[cat].sort((a, b) => b.amount - a.amount);
+    const catTotal = items.reduce((s, x) => s + x.amount, 0);
+    const catPct = total > 0 ? (catTotal / total * 100).toFixed(1) : '0.0';
+    const color = catColors[cat] || '#999';
+
+    breakdownHTML += `<div style="margin-bottom:12px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 10px;background:${isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.03)'};border-radius:8px;border-left:4px solid ${color};">
+        <div style="display:flex;align-items:center;gap:8px;">
+          <span style="font-weight:700;font-size:0.9rem;">${cat}</span>
+          <span style="font-size:0.75rem;color:var(--text2);">${catPct}%</span>
+        </div>
+        <span style="font-weight:700;font-size:0.95rem;color:${color};">${formatManWon(catTotal)}</span>
+      </div>`;
+    // 개별 항목 표시
+    if (items.length > 1) {
+      items.forEach(item => {
+        const itemPct = total > 0 ? (item.amount / total * 100).toFixed(1) : '0.0';
+        breakdownHTML += `<div style="display:flex;justify-content:space-between;align-items:center;padding:4px 10px 4px 24px;font-size:0.82rem;">
+          <span style="color:var(--text2);">├ ${item.name}</span>
+          <span style="font-weight:600;">${formatManWon(item.amount)} <span style="color:var(--text2);font-size:0.72rem;">(${itemPct}%)</span></span>
+        </div>`;
+      });
+    }
+    // 항목이 1개인 카테고리: 계좌 보유 종목에서 대표 종목 표시
+    const acctTypeByCat = { '해외주식': '해외주식', '국내주식/ETF': '국내주식', '암호화폐': '기타' };
+    if (items.length <= 1 && acctTypeByCat[cat]) {
+      const targetType = acctTypeByCat[cat];
+      const topHoldings = [];
+      appData.accounts.forEach(acc => {
+        if (acc.type === targetType) {
+          (acc.holdings || []).forEach(h => {
+            topHoldings.push({ name: h.name, eval: h.currentPrice * h.quantity });
+          });
+        }
+      });
+      topHoldings.sort((a, b) => b.eval - a.eval);
+      const showCount = Math.min(2, topHoldings.length);
+      for (let ti = 0; ti < showCount; ti++) {
+        const th = topHoldings[ti];
+        const hManWon = Math.round(th.eval / 10000);
+        breakdownHTML += `<div style="display:flex;justify-content:space-between;align-items:center;padding:3px 10px 3px 24px;font-size:0.8rem;">
+          <span style="color:var(--text2);">├ ${th.name}</span>
+          <span style="font-weight:600;">${formatManWon(hManWon)} <span style="color:var(--text2);font-size:0.72rem;">(${total > 0 ? (hManWon / total * 100).toFixed(1) : '0.0'}%)</span></span>
+        </div>`;
+      }
+      if (topHoldings.length > showCount) {
+        breakdownHTML += `<div style="padding:2px 10px 2px 24px;font-size:0.75rem;color:var(--text2);">└ 외 ${topHoldings.length - showCount}종목</div>`;
+      }
+    }
+    breakdownHTML += `</div>`;
+  });
+
+  // 하단에 총 자산 표시
+  breakdownHTML += `<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 12px;margin-top:4px;border-top:2px solid var(--primary);border-radius:0 0 8px 8px;">
+    <span style="font-weight:700;font-size:0.95rem;">💰 총 자산</span>
+    <span style="font-weight:800;font-size:1.1rem;color:var(--primary);">${formatManWon(total)}</span>
+  </div>`;
+
+  document.getElementById('asset-breakdown').innerHTML = breakdownHTML;
+}
+
+function updateAssetSummary(total) {
+  const catMap = {};
+  appData.assets.forEach(a => {
+    catMap[a.category] = (catMap[a.category] || 0) + a.amount;
+  });
+  document.getElementById('asset-summary').innerHTML = `
+    <div class="summary-card teal">
+      <div class="label">총 자산</div>
+      <div class="value">${formatManWon(total)}</div>
+    </div>
+    <div class="summary-card green">
+      <div class="label">금융자산</div>
+      <div class="value">${formatManWon((catMap['연금저축/IRP']||0)+(catMap['ISA']||0)+(catMap['해외주식']||0)+(catMap['국내주식/ETF']||0)+(catMap['암호화폐']||0)+(catMap['예적금/현금']||0))}</div>
+    </div>
+    <div class="summary-card orange">
+      <div class="label">부동산</div>
+      <div class="value">${formatManWon(catMap['부동산']||0)}</div>
+    </div>
+    <div class="summary-card purple">
+      <div class="label">연금자산</div>
+      <div class="value">${formatManWon((catMap['사학연금']||0)+(catMap['연금저축/IRP']||0)+(catMap['보험']||0))}</div>
+    </div>
+  `;
+}
+
+function deleteAsset(idx) {
+  appData.assets.splice(idx, 1);
+  saveData();
+  renderAssets();
+  showToast('자산이 삭제되었습니다');
+}
+
+// ===================================================================
+//  탭 3: 계좌별 포트폴리오
+// ===================================================================
+
+function addAccount() {
+  openModal(`
+    <h3>계좌 추가</h3>
+    <div class="form-grid">
+      <div class="form-group">
+        <label>소유자</label>
+        <select id="mac-owner">
+          <option value="본인">본인</option>
+          <option value="배우자">배우자</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>계좌명</label>
+        <input type="text" id="mac-name" placeholder="예: 미래에셋 연금저축">
+      </div>
+      <div class="form-group">
+        <label>계좌유형</label>
+        <select id="mac-type">
+          <option value="연금저축">연금저축</option>
+          <option value="IRP">IRP</option>
+          <option value="ISA">ISA</option>
+          <option value="해외주식">해외주식</option>
+          <option value="국내주식">국내주식</option>
+          <option value="기타">기타</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>증권사</label>
+        <input type="text" id="mac-broker" placeholder="예: 미래에셋증권">
+      </div>
+    </div>
+    <div class="btn-group">
+      <button class="btn btn-primary" onclick="saveAccount(-1)">저장</button>
+      <button class="btn btn-danger" onclick="closeModalForce()">취소</button>
+    </div>
+  `);
+}
+
+function editAccount() {
+  const idx = appData.currentAccountIdx;
+  if (idx < 0) return;
+  const acc = appData.accounts[idx];
+  const types = ['연금저축','IRP','ISA','해외주식','국내주식','기타'];
+  const typeOptions = types.map(t => `<option value="${t}" ${acc.type === t ? 'selected' : ''}>${t}</option>`).join('');
+  openModal(`
+    <h3>계좌 수정</h3>
+    <div class="form-grid">
+      <div class="form-group">
+        <label>소유자</label>
+        <select id="mac-owner"><option value="본인" ${acc.owner === '본인' ? 'selected' : ''}>본인</option><option value="배우자" ${acc.owner === '배우자' ? 'selected' : ''}>배우자</option></select>
+      </div>
+      <div class="form-group">
+        <label>계좌명</label>
+        <input type="text" id="mac-name" value="${acc.name}">
+      </div>
+      <div class="form-group">
+        <label>계좌유형</label>
+        <select id="mac-type">${typeOptions}</select>
+      </div>
+      <div class="form-group">
+        <label>증권사</label>
+        <input type="text" id="mac-broker" value="${acc.broker || ''}">
+      </div>
+    </div>
+    <div class="btn-group">
+      <button class="btn btn-primary" onclick="saveAccount(${idx})">저장</button>
+      <button class="btn btn-danger" onclick="closeModalForce()">취소</button>
+    </div>
+  `);
+}
+
+function saveAccount(idx) {
+  const account = {
+    owner: document.getElementById('mac-owner').value || '본인',
+    name: document.getElementById('mac-name').value || '계좌',
+    type: document.getElementById('mac-type').value,
+    broker: document.getElementById('mac-broker').value || ''
+  };
+  if (idx !== undefined && idx >= 0) {
+    account.holdings = appData.accounts[idx].holdings || [];
+    appData.accounts[idx] = account;
+  } else {
+    account.holdings = [];
+    appData.accounts.push(account);
+  }
+  saveData();
+  renderAccounts();
+  closeModalForce();
+  showToast(idx >= 0 ? '계좌가 수정되었습니다' : '계좌가 추가되었습니다');
+}
+
+function renderAccounts() {
+  const container = document.getElementById('account-tabs');
+  const ownerGroups = { '본인': [], '배우자': [] };
+  appData.accounts.forEach((acc, i) => {
+    const owner = acc.owner || '본인';
+    if (!ownerGroups[owner]) ownerGroups[owner] = [];
+    ownerGroups[owner].push({ acc, idx: i });
+  });
+
+  let html = '';
+  Object.entries(ownerGroups).forEach(([owner, accs]) => {
+    if (accs.length === 0) return;
+    const ownerColor = owner === '본인' ? '#3b82f6' : '#ec4899';
+    html += `<div class="owner-group">
+      <div class="owner-label" style="color:${ownerColor};font-weight:700;font-size:0.9rem;margin-bottom:6px;display:flex;align-items:center;gap:6px;">
+        <span style="background:${ownerColor};color:white;padding:2px 10px;border-radius:12px;font-size:0.78rem;">${owner}</span>
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;">`;
+    accs.forEach(({ acc, idx }) => {
+      html += `<button class="account-tab ${appData.currentAccountIdx === idx ? 'active' : ''}" onclick="selectAccount(${idx})">
+        ${acc.name} <span style="font-size:0.75rem;opacity:0.7;">(${acc.type})</span>
+      </button>`;
+    });
+    html += '</div></div>';
+  });
+  container.innerHTML = html;
+
+  if (appData.currentAccountIdx >= 0 && appData.currentAccountIdx < appData.accounts.length) {
+    renderAccountDetail();
+  } else {
+    document.getElementById('account-detail').style.display = 'none';
+  }
+  renderAllHoldingsCharts();
+}
+
+function selectAccount(idx) {
+  appData.currentAccountIdx = idx;
+  renderAccounts();
+}
+
+function deleteCurrentAccount() {
+  if (appData.currentAccountIdx < 0) return;
+  appData.accounts.splice(appData.currentAccountIdx, 1);
+  appData.currentAccountIdx = -1;
+  saveData();
+  renderAccounts();
+  showToast('계좌가 삭제되었습니다');
+}
+
+function renderAccountDetail() {
+  const acc = appData.accounts[appData.currentAccountIdx];
+  if (!acc) return;
+
+  document.getElementById('account-detail').style.display = 'block';
+  document.getElementById('account-detail-title').textContent = `[${acc.owner || '본인'}] ${acc.name} (${acc.broker}) - 종목 관리`;
+
+  const tbody = document.getElementById('holdings-body');
+  const tfoot = document.getElementById('holdings-foot');
+
+  if (acc.holdings.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;color:var(--text2);">종목을 추가하세요</td></tr>';
+    tfoot.innerHTML = '';
+    return;
+  }
+
+  let totalEval = 0, totalCost = 0, totalDiv = 0;
+  // 평가금액 기준 내림차순 정렬 (원본 인덱스 보존)
+  const sortedHoldings = acc.holdings.map((h, i) => ({ h, i, evalAmt: h.currentPrice * h.quantity }))
+    .sort((a, b) => b.evalAmt - a.evalAmt);
+  tbody.innerHTML = sortedHoldings.map(({ h, i }) => {
+    const evalAmt = h.currentPrice * h.quantity;
+    const costAmt = h.purchasePrice * h.quantity;
+    const returnPct = costAmt > 0 ? ((evalAmt - costAmt) / costAmt * 100) : 0;
+    const annualDiv = evalAmt * (h.dividendYield / 100);
+    totalEval += evalAmt;
+    totalCost += costAmt;
+    totalDiv += annualDiv;
+    return `<tr>
+      <td style="text-align:left;">${h.name}${h.stockCode ? '<br><span style="font-size:0.68rem;color:var(--text2);font-family:monospace;">'+h.stockCode+'</span>' : ''}</td>
+      <td>${formatNum(h.purchasePrice)}원</td>
+      <td>${formatNum(h.quantity)}</td>
+      <td>${formatNum(h.currentPrice)}원</td>
+      <td>${formatNum(evalAmt)}원</td>
+      <td class="${returnPct >= 0 ? 'num-positive' : 'num-negative'}">${formatPercent(returnPct)}</td>
+      <td>${h.dividendYield.toFixed(1)}%</td>
+      <td>${formatNum(annualDiv)}원</td>
+      <td>
+        <button class="btn btn-sm btn-primary" onclick="editHolding(${i})">수정</button>
+        <button class="btn btn-sm btn-danger" onclick="deleteHolding(${i})">삭제</button>
+      </td>
+    </tr>`;
+  }).join('');
+
+  const totalReturn = totalCost > 0 ? ((totalEval - totalCost) / totalCost * 100) : 0;
+  tfoot.innerHTML = `<tr style="font-weight:700;">
+    <td>합계</td><td></td><td></td><td></td>
+    <td>${formatNum(totalEval)}원</td>
+    <td class="${totalReturn >= 0 ? 'num-positive' : 'num-negative'}">${formatPercent(totalReturn)}</td>
+    <td></td>
+    <td>${formatNum(totalDiv)}원</td>
+    <td></td>
+  </tr>`;
+
+}
+
+// 전체 계좌 종목 합산 차트
+function renderAllHoldingsCharts() {
+  // 전체 종목 합산 (동일 종목명은 합산)
+  const holdingMap = {};
+  appData.accounts.forEach(acc => {
+    (acc.holdings || []).forEach(h => {
+      const key = h.name;
+      if (!holdingMap[key]) {
+        holdingMap[key] = { name: h.name, totalEval: 0, totalCost: 0 };
+      }
+      holdingMap[key].totalEval += h.currentPrice * h.quantity;
+      holdingMap[key].totalCost += h.purchasePrice * h.quantity;
+    });
+  });
+
+  const allHoldings = Object.values(holdingMap);
+  if (allHoldings.length === 0) {
+    if (charts.holdingsPie) { charts.holdingsPie.destroy(); charts.holdingsPie = null; }
+    if (charts.holdingsBar) { charts.holdingsBar.destroy(); charts.holdingsBar = null; }
+    return;
+  }
+
+  // 평가금액 기준 내림차순 정렬
+  allHoldings.sort((a, b) => b.totalEval - a.totalEval);
+
+  const names = allHoldings.map(h => h.name);
+  const evals = allHoldings.map(h => h.totalEval);
+  const returns = allHoldings.map(h => h.totalCost > 0 ? ((h.totalEval - h.totalCost) / h.totalCost * 100) : 0);
+  const totalEval = evals.reduce((s, v) => s + v, 0);
+  const colors = ['#3b82f6','#10b981','#f59e0b','#ef4444','#8b5cf6','#ec4899','#06b6d4','#84cc16','#f97316','#6366f1','#14b8a6','#e11d48','#0ea5e9','#a855f7'];
+
+  if (charts.holdingsPie) charts.holdingsPie.destroy();
+  charts.holdingsPie = new Chart(document.getElementById('holdings-pie-chart'), {
+    type: 'doughnut',
+    data: {
+      labels: names,
+      datasets: [{ data: evals, backgroundColor: colors.slice(0, names.length), borderWidth: 2, borderColor: 'var(--card)' }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { position: 'bottom', labels: { font: { size: 10 }, boxWidth: 10 } },
+        tooltip: {
+          callbacks: {
+            label: ctx => {
+              const pct = totalEval > 0 ? (ctx.raw / totalEval * 100).toFixed(1) : 0;
+              return `${ctx.label}: ${formatNum(ctx.raw)} (${pct}%)`;
+            }
+          }
+        }
+      }
+    }
+  });
+
+  // 수익률 기준 내림차순 정렬 → 상위 10개
+  const returnData = allHoldings.map(h => ({
+    name: h.name,
+    returnPct: h.totalCost > 0 ? ((h.totalEval - h.totalCost) / h.totalCost * 100) : 0,
+    totalEval: h.totalEval
+  }));
+  returnData.sort((a, b) => b.returnPct - a.returnPct);
+  const top10 = returnData.slice(0, 10);
+
+  // 이름 축약 함수
+  function shortenName(name) {
+    if (name.length <= 10) return name;
+    // TIGER → T., KODEX → K., SOL → S. 등 접두어 축약
+    let s = name
+      .replace(/^TIGER\s+/, 'T.')
+      .replace(/^KODEX\s+/, 'K.')
+      .replace(/^SOL\s+/, 'S.')
+      .replace(/^KOSEF\s+/, 'KF.')
+      .replace(/^KBSTAR\s+/, 'KB.')
+      .replace(/^HANARO\s+/, 'H.')
+      .replace(/^ARIRANG\s+/, 'A.')
+      .replace(/^ACE\s+/, 'A.');
+    if (s.length > 14) s = s.substring(0, 13) + '…';
+    return s;
+  }
+
+  const barLabels = top10.map(d => shortenName(d.name));
+  const barData = top10.map(d => parseFloat(d.returnPct.toFixed(1)));
+  const barColors = top10.map(d => d.returnPct >= 0 ? '#10b981' : '#ef4444');
+  const isDarkMode = document.body.classList.contains('dark');
+
+  if (charts.holdingsBar) charts.holdingsBar.destroy();
+  charts.holdingsBar = new Chart(document.getElementById('holdings-bar-chart'), {
+    type: 'bar',
+    data: {
+      labels: barLabels,
+      datasets: [{
+        label: '수익률',
+        data: barData,
+        backgroundColor: barColors,
+        borderRadius: 4,
+        barThickness: 22
+      }]
+    },
+    plugins: [{
+      id: 'barValueLabel',
+      afterDraw(chart) {
+        const ctx = chart.ctx;
+        const meta = chart.getDatasetMeta(0);
+        meta.data.forEach((bar, i) => {
+          const val = chart.data.datasets[0].data[i];
+          ctx.save();
+          ctx.font = 'bold 11px sans-serif';
+          ctx.fillStyle = isDarkMode ? '#e2e8f0' : '#1a1a2e';
+          ctx.textBaseline = 'middle';
+          if (val >= 0) {
+            ctx.textAlign = 'left';
+            ctx.fillText(val + '%', bar.x + 6, bar.y);
+          } else {
+            ctx.textAlign = 'right';
+            ctx.fillText(val + '%', bar.x - 6, bar.y);
+          }
+          ctx.restore();
+        });
+      }
+    }],
+    options: {
+      indexAxis: 'y',
+      responsive: true,
+      maintainAspectRatio: false,
+      layout: { padding: { right: 60 } },
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            title: ctx => top10[ctx[0].dataIndex].name,
+            label: ctx => `수익률: ${ctx.raw}% | 평가금액: ${formatNum(top10[ctx.dataIndex].totalEval)}원`
+          }
+        }
+      },
+      scales: {
+        x: {
+          ticks: { callback: v => v + '%' },
+          grid: { color: isDarkMode ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)' }
+        },
+        y: {
+          ticks: { font: { size: 11 } },
+          grid: { display: false }
+        }
+      }
+    }
+  });
+
+  renderDividendCharts();
+}
+
+// 배당금 분기별/월별 차트
+function renderDividendCharts() {
+  const colors = ['#3b82f6','#10b981','#f59e0b','#ef4444','#8b5cf6','#ec4899','#06b6d4','#84cc16','#f97316','#6366f1','#14b8a6','#e11d48','#0ea5e9','#a855f7'];
+
+  // 종목별 월별 배당금 계산
+  const holdingDiv = {};
+  appData.accounts.forEach(acc => {
+    (acc.holdings || []).forEach(h => {
+      const key = h.name;
+      const evalAmt = h.currentPrice * h.quantity;
+      const annualDiv = evalAmt * (h.dividendYield / 100);
+      const freq = h.dividendFrequency || 'quarterly';
+      if (!holdingDiv[key]) holdingDiv[key] = { name: h.name, monthly: new Array(12).fill(0), totalEval: 0 };
+      holdingDiv[key].totalEval += evalAmt;
+      // 배당주기에 따라 월별 배분
+      if (freq === 'monthly') {
+        for (let m = 0; m < 12; m++) holdingDiv[key].monthly[m] += annualDiv / 12;
+      } else if (freq === 'quarterly') {
+        [2,5,8,11].forEach(m => holdingDiv[key].monthly[m] += annualDiv / 4);
+      } else if (freq === 'semiannual') {
+        [5,11].forEach(m => holdingDiv[key].monthly[m] += annualDiv / 2);
+      } else {
+        holdingDiv[key].monthly[11] += annualDiv;
+      }
+    });
+  });
+
+  const allDiv = Object.values(holdingDiv);
+  if (allDiv.length === 0) {
+    if (charts.divQuarterly) { charts.divQuarterly.destroy(); charts.divQuarterly = null; }
+    if (charts.divMonthly) { charts.divMonthly.destroy(); charts.divMonthly = null; }
+    document.getElementById('div-quarterly-total').textContent = '';
+    document.getElementById('div-monthly-total').textContent = '';
+    return;
+  }
+
+  // 평가금액 기준 내림차순 정렬
+  allDiv.sort((a, b) => b.totalEval - a.totalEval);
+
+  // 총 연배당금 계산
+  const totalAnnualDiv = allDiv.reduce((sum, h) => sum + h.monthly.reduce((s, v) => s + v, 0), 0);
+  document.getElementById('div-quarterly-total').textContent = `연 배당금: ${formatNum(Math.round(totalAnnualDiv))}원`;
+  document.getElementById('div-monthly-total').textContent = `월 평균: ${formatNum(Math.round(totalAnnualDiv / 12))}원`;
+
+  // === 분기별 배당금 차트 ===
+  const quarterLabels = ['1분기 (1~3월)', '2분기 (4~6월)', '3분기 (7~9월)', '4분기 (10~12월)'];
+  const quarterDatasets = allDiv.map((h, i) => ({
+    label: h.name,
+    data: [
+      h.monthly[0] + h.monthly[1] + h.monthly[2],
+      h.monthly[3] + h.monthly[4] + h.monthly[5],
+      h.monthly[6] + h.monthly[7] + h.monthly[8],
+      h.monthly[9] + h.monthly[10] + h.monthly[11]
+    ].map(v => Math.round(v)),
+    backgroundColor: colors[i % colors.length],
+    borderRadius: 4
+  }));
+
+  // 스택 바 위에 총액 표시 플러그인
+  const stackTotalPlugin = {
+    id: 'stackTotal',
+    afterDraw(chart) {
+      const ctx = chart.ctx;
+      const dsCount = chart.data.datasets.length;
+      if (dsCount === 0) return;
+      const isDark = document.body.classList.contains('dark');
+      chart.data.labels.forEach((_, i) => {
+        let total = 0;
+        chart.data.datasets.forEach(ds => { total += ds.data[i] || 0; });
+        if (total <= 0) return;
+        // 맨 위 데이터셋의 바 위치 찾기
+        let topY = Infinity;
+        for (let d = dsCount - 1; d >= 0; d--) {
+          const meta = chart.getDatasetMeta(d);
+          if (meta.hidden) continue;
+          const bar = meta.data[i];
+          if (bar && bar.y < topY) topY = bar.y;
+        }
+        ctx.save();
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'bottom';
+        ctx.font = 'bold 12px sans-serif';
+        ctx.fillStyle = isDark ? '#e2e8f0' : '#1a1a2e';
+        ctx.fillText(formatNum(total) + '원', chart.getDatasetMeta(0).data[i].x, topY - 6);
+        ctx.restore();
+      });
+    }
+  };
+
+  if (charts.divQuarterly) charts.divQuarterly.destroy();
+  charts.divQuarterly = new Chart(document.getElementById('dividend-quarterly-chart'), {
+    type: 'bar',
+    data: { labels: quarterLabels, datasets: quarterDatasets },
+    plugins: [stackTotalPlugin],
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      layout: { padding: { top: 25 } },
+      plugins: {
+        legend: { position: 'bottom', labels: { font: { size: 10 }, boxWidth: 10 } },
+        tooltip: { callbacks: { label: ctx => `${ctx.dataset.label}: ${formatNum(ctx.raw)}원` } }
+      },
+      scales: {
+        x: { stacked: true },
+        y: { stacked: true, ticks: { callback: v => formatNum(v) + '원' } }
+      }
+    }
+  });
+
+  // === 월별 배당금 차트 ===
+  const monthLabels = ['1월','2월','3월','4월','5월','6월','7월','8월','9월','10월','11월','12월'];
+  const monthDatasets = allDiv.map((h, i) => ({
+    label: h.name,
+    data: h.monthly.map(v => Math.round(v)),
+    backgroundColor: colors[i % colors.length],
+    borderRadius: 4
+  }));
+
+  if (charts.divMonthly) charts.divMonthly.destroy();
+  charts.divMonthly = new Chart(document.getElementById('dividend-monthly-chart'), {
+    type: 'bar',
+    data: { labels: monthLabels, datasets: monthDatasets },
+    plugins: [stackTotalPlugin],
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      layout: { padding: { top: 25 } },
+      plugins: {
+        legend: { position: 'bottom', labels: { font: { size: 10 }, boxWidth: 10 } },
+        tooltip: { callbacks: { label: ctx => `${ctx.dataset.label}: ${formatNum(ctx.raw)}원` } }
+      },
+      scales: {
+        x: { stacked: true },
+        y: { stacked: true, ticks: { callback: v => formatNum(v) + '원' } }
+      }
+    }
+  });
+}
+
+function addHolding() {
+  openModal(`
+    <h3>종목 추가</h3>
+    <div class="form-grid">
+      <div class="form-group">
+        <label>종목명</label>
+        <input type="text" id="mh-name" placeholder="예: TIGER 미국S&P500">
+      </div>
+      <div class="form-group">
+        <label>종목코드</label>
+        <input type="text" id="mh-code" placeholder="예: 360750" style="font-family:monospace;">
+        <small style="color:var(--text2);font-size:0.7rem;">한국:종목코드(360750) / 미국:티커(TSLA) / 코인:C:티커(C:BTC)</small>
+      </div>
+      <div class="form-group">
+        <label>매수단가</label>
+        <input type="number" id="mh-price" value="0" step="1">
+      </div>
+      <div class="form-group">
+        <label>수량</label>
+        <input type="number" id="mh-qty" value="0" step="0.001">
+      </div>
+      <div class="form-group">
+        <label>현재가</label>
+        <input type="number" id="mh-current" value="0" step="1">
+      </div>
+      <div class="form-group">
+        <label>배당률 (%)</label>
+        <input type="number" id="mh-div" value="0" step="0.1">
+      </div>
+      <div class="form-group">
+        <label>배당주기</label>
+        <select id="mh-freq">
+          <option value="monthly">월배당</option>
+          <option value="quarterly" selected>분기배당</option>
+          <option value="semiannual">반기배당</option>
+          <option value="annual">연배당</option>
+        </select>
+      </div>
+    </div>
+    <div class="btn-group">
+      <button class="btn btn-primary" onclick="saveHolding(-1)">저장</button>
+      <button class="btn btn-danger" onclick="closeModalForce()">취소</button>
+    </div>
+  `);
+}
+
+function editHolding(idx) {
+  const acc = appData.accounts[appData.currentAccountIdx];
+  const h = acc.holdings[idx];
+  openModal(`
+    <h3>종목 수정</h3>
+    <div class="form-grid">
+      <div class="form-group">
+        <label>종목명</label>
+        <input type="text" id="mh-name" value="${h.name}">
+      </div>
+      <div class="form-group">
+        <label>종목코드</label>
+        <input type="text" id="mh-code" value="${h.stockCode || ''}" placeholder="예: 360750" style="font-family:monospace;">
+        <small style="color:var(--text2);font-size:0.7rem;">한국:종목코드(360750) / 미국:티커(TSLA) / 코인:C:티커(C:BTC)</small>
+      </div>
+      <div class="form-group">
+        <label>매수단가</label>
+        <input type="number" id="mh-price" value="${h.purchasePrice}" step="1">
+      </div>
+      <div class="form-group">
+        <label>수량</label>
+        <input type="number" id="mh-qty" value="${h.quantity}" step="0.001">
+      </div>
+      <div class="form-group">
+        <label>현재가</label>
+        <input type="number" id="mh-current" value="${h.currentPrice}" step="1">
+      </div>
+      <div class="form-group">
+        <label>배당률 (%)</label>
+        <input type="number" id="mh-div" value="${h.dividendYield}" step="0.1">
+      </div>
+      <div class="form-group">
+        <label>배당주기</label>
+        <select id="mh-freq">
+          <option value="monthly" ${(h.dividendFrequency||'quarterly')==='monthly'?'selected':''}>월배당</option>
+          <option value="quarterly" ${(h.dividendFrequency||'quarterly')==='quarterly'?'selected':''}>분기배당</option>
+          <option value="semiannual" ${(h.dividendFrequency||'quarterly')==='semiannual'?'selected':''}>반기배당</option>
+          <option value="annual" ${(h.dividendFrequency||'quarterly')==='annual'?'selected':''}>연배당</option>
+        </select>
+      </div>
+    </div>
+    <div class="btn-group">
+      <button class="btn btn-primary" onclick="saveHolding(${idx})">저장</button>
+      <button class="btn btn-danger" onclick="closeModalForce()">취소</button>
+    </div>
+  `);
+}
+
+function saveHolding(idx) {
+  const holding = {
+    name: document.getElementById('mh-name').value || '종목',
+    stockCode: document.getElementById('mh-code').value.trim() || '',
+    purchasePrice: parseFloat(document.getElementById('mh-price').value) || 0,
+    quantity: parseFloat(document.getElementById('mh-qty').value) || 0,
+    currentPrice: parseFloat(document.getElementById('mh-current').value) || 0,
+    dividendYield: parseFloat(document.getElementById('mh-div').value) || 0,
+    dividendFrequency: document.getElementById('mh-freq').value || 'quarterly'
+  };
+  const acc = appData.accounts[appData.currentAccountIdx];
+  if (idx < 0) {
+    acc.holdings.push(holding);
+  } else {
+    acc.holdings[idx] = holding;
+  }
+  saveData();
+  renderAccountDetail();
+  renderAllHoldingsCharts();
+  closeModalForce();
+  showToast(idx < 0 ? '종목이 추가되었습니다' : '종목이 수정되었습니다');
+}
+
+function deleteHolding(idx) {
+  appData.accounts[appData.currentAccountIdx].holdings.splice(idx, 1);
+  saveData();
+  renderAccountDetail();
+  renderAllHoldingsCharts();
+  showToast('종목이 삭제되었습니다');
+}
+
+// --- 실시간 현재가 갱신 (한국주식 + 미국주식 + 암호화폐) ---
+async function fetchCurrentPrices() {
+  const btn = document.getElementById('btn-fetch-prices');
+  const statusEl = document.getElementById('price-update-status');
+  const PROXY = 'https://api.codetabs.com/v1/proxy/?quest=';
+
+  // 전체 계좌의 종목코드가 있는 종목 수집 & 분류
+  const targets = [];
+  appData.accounts.forEach((acc, ai) => {
+    (acc.holdings || []).forEach((h, hi) => {
+      if (h.stockCode && h.stockCode.trim()) {
+        const code = h.stockCode.trim();
+        let type = 'KR'; // 기본: 한국 주식 (숫자)
+        if (/^C:/i.test(code)) type = 'CRYPTO'; // C:BTC → 암호화폐
+        else if (/^[A-Za-z]/.test(code)) type = 'US'; // 영문 → 미국 주식
+        targets.push({ accIdx: ai, holdIdx: hi, code, name: h.name, type });
+      }
+    });
+  });
+
+  if (targets.length === 0) {
+    showToast('종목코드가 입력된 종목이 없습니다.\n종목 수정에서 종목코드를 입력하세요.');
+    return;
+  }
+
+  // UI 업데이트 - 로딩 상태
+  btn.disabled = true;
+  btn.innerHTML = '⏳ 조회중...';
+  statusEl.style.display = 'block';
+
+  const hasUS = targets.some(t => t.type === 'US');
+  const hasCrypto = targets.some(t => t.type === 'CRYPTO');
+  let usdKrw = 0;
+
+  // 미국 주식이 있으면 환율 먼저 조회
+  if (hasUS) {
+    statusEl.innerHTML = `<span style="color:var(--primary);">💱 USD/KRW 환율 조회중...</span>`;
+    try {
+      const fxResp = await fetch(PROXY + encodeURIComponent('https://api.stock.naver.com/marketindex/exchange/FX_USDKRW'));
+      const fxData = await fxResp.json();
+      usdKrw = parseFloat(fxData.exchangeInfo.closePrice.replace(/,/g, ''));
+    } catch (e) {
+      usdKrw = 1450;
+    }
+  }
+
+  // 암호화폐 일괄 조회 (업비트 API - 한 번의 호출로 모든 코인 조회)
+  const cryptoTargets = targets.filter(t => t.type === 'CRYPTO');
+  const cryptoPriceMap = {};
+  if (cryptoTargets.length > 0) {
+    statusEl.innerHTML = `<span style="color:var(--primary);">🪙 암호화폐 시세 조회중...</span>`;
+    try {
+      const markets = cryptoTargets.map(t => 'KRW-' + t.code.replace(/^C:/i, '').toUpperCase()).join(',');
+      const cResp = await fetch(PROXY + encodeURIComponent(`https://api.upbit.com/v1/ticker?markets=${markets}`));
+      const cData = await cResp.json();
+      if (Array.isArray(cData)) {
+        cData.forEach(c => {
+          const symbol = c.market.replace('KRW-', '');
+          cryptoPriceMap[symbol] = Math.round(c.trade_price);
+        });
+      }
+    } catch (e) { /* 개별 조회로 폴백 */ }
+  }
+
+  const infoArr = [];
+  if (hasUS) infoArr.push('환율: ' + formatNum(Math.round(usdKrw)) + '원/$');
+  statusEl.innerHTML = `<span style="color:var(--primary);">📡 ${targets.length}개 종목 현재가 조회중...${infoArr.length ? ' (' + infoArr.join(', ') + ')' : ''}</span>`;
+
+  let successCount = 0;
+  let failCount = 0;
+  const failList = [];
+
+  for (let t = 0; t < targets.length; t++) {
+    const { accIdx, holdIdx, code, name, type } = targets[t];
+    const flag = type === 'US' ? ' 🇺🇸' : type === 'CRYPTO' ? ' 🪙' : ' 🇰🇷';
+    statusEl.innerHTML = `<span style="color:var(--primary);">📡 조회중 (${t + 1}/${targets.length}): ${name} [${code}]${flag}</span>`;
+
+    try {
+      let price = 0;
+
+      if (type === 'CRYPTO') {
+        // 암호화폐: 업비트 (이미 일괄 조회 완료)
+        const symbol = code.replace(/^C:/i, '').toUpperCase();
+        if (cryptoPriceMap[symbol]) {
+          price = cryptoPriceMap[symbol];
+        } else {
+          // 일괄 조회 실패 시 개별 조회
+          const cResp = await fetch(PROXY + encodeURIComponent(`https://api.upbit.com/v1/ticker?markets=KRW-${symbol}`));
+          const cData = await cResp.json();
+          if (Array.isArray(cData) && cData.length > 0) {
+            price = Math.round(cData[0].trade_price);
+          } else {
+            throw new Error('업비트 조회 실패');
+          }
+        }
+      } else if (type === 'US') {
+        // 미국 주식: 나스닥(.O) → NYSE(접미사 없음) 순서
+        const ticker = code.toUpperCase();
+        let data = null;
+        try {
+          const resp1 = await fetch(PROXY + encodeURIComponent(`https://api.stock.naver.com/stock/${ticker}.O/basic`));
+          const d1 = await resp1.json();
+          if (d1.closePrice) data = d1;
+        } catch(e) {}
+        if (!data) {
+          try {
+            const resp2 = await fetch(PROXY + encodeURIComponent(`https://api.stock.naver.com/stock/${ticker}/basic`));
+            const d2 = await resp2.json();
+            if (d2.closePrice) data = d2;
+          } catch(e) {}
+        }
+        if (data && data.closePrice) {
+          const usdPrice = parseFloat(data.closePrice.replace(/[,$]/g, ''));
+          price = Math.round(usdPrice * usdKrw);
+        }
+        // 3차: Yahoo Finance 폴백 (Naver 미지원 종목용)
+        if (price === 0) {
+          try {
+            statusEl.innerHTML = `<span style="color:#f59e0b;">⚠️ ${name}: 네이버 미지원 → Yahoo Finance 조회중...</span>`;
+            const yUrl = 'https://corsproxy.io/?' + encodeURIComponent(`https://query1.finance.yahoo.com/v8/finance/chart/${ticker}?interval=1d&range=1d`);
+            const yResp = await fetch(yUrl);
+            const yData = await yResp.json();
+            const yPrice = yData?.chart?.result?.[0]?.meta?.regularMarketPrice;
+            if (yPrice && yPrice > 0) {
+              price = Math.round(yPrice * usdKrw);
+            }
+          } catch(e) {}
+        }
+        if (price === 0) {
+          throw new Error('미국 주식 조회 실패 (Naver+Yahoo)');
+        }
+      } else {
+        // 한국 주식
+        const url = PROXY + encodeURIComponent(`https://m.stock.naver.com/api/stock/${code}/basic`);
+        const resp = await fetch(url);
+        if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+        const data = await resp.json();
+        if (data.closePrice) {
+          price = parseInt(data.closePrice.replace(/,/g, ''), 10);
+        } else {
+          throw new Error('closePrice 없음');
+        }
+      }
+
+      if (price > 0) {
+        appData.accounts[accIdx].holdings[holdIdx].currentPrice = price;
+        successCount++;
+      } else {
+        throw new Error('가격 파싱 실패');
+      }
+    } catch (err) {
+      failCount++;
+      failList.push(`${name}(${code})`);
+    }
+
+    // API 부하 방지 딜레이 (암호화폐는 이미 일괄 조회하므로 짧게)
+    if (t < targets.length - 1 && type !== 'CRYPTO') {
+      await new Promise(r => setTimeout(r, 500));
+    }
+  }
+
+  // 저장 및 UI 갱신
+  saveData();
+  renderAccountDetail();
+  renderAllHoldingsCharts();
+
+  // 결과 표시
+  btn.disabled = false;
+  btn.innerHTML = '📡 현재가 갱신';
+
+  const now = new Date();
+  const timeStr = `${now.getHours().toString().padStart(2,'0')}:${now.getMinutes().toString().padStart(2,'0')}:${now.getSeconds().toString().padStart(2,'0')}`;
+  const extras = [];
+  if (hasUS) extras.push(`💱 환율 ${formatNum(Math.round(usdKrw))}원/$`);
+  if (hasCrypto) extras.push('🪙 업비트');
+  const extraStr = extras.length ? ' · ' + extras.join(' · ') : '';
+
+  if (failCount === 0) {
+    statusEl.innerHTML = `<span style="color:#10b981;">✅ ${successCount}개 종목 현재가 갱신 완료${extraStr} (${timeStr})</span>`;
+    showToast(`${successCount}개 종목 현재가가 갱신되었습니다!`);
+  } else {
+    statusEl.innerHTML = `<span style="color:#10b981;">✅ 성공 ${successCount}개</span> · <span style="color:#ef4444;">❌ 실패 ${failCount}개: ${failList.join(', ')}</span>${extraStr} <span style="color:var(--text2);">(${timeStr})</span>`;
+    showToast(`${successCount}개 성공, ${failCount}개 실패`);
+  }
+
+  setTimeout(() => { statusEl.style.display = 'none'; }, 15000);
+}
+
+// ===================================================================
+//  탭 4: 설정
+// ===================================================================
+
+function saveSettings() {
+  // 본인 프로필
+  if (!appData.settings.owner) appData.settings.owner = {};
+  appData.settings.owner.name = document.getElementById('set-owner-name').value;
+  appData.settings.owner.nickname = document.getElementById('set-owner-nickname').value;
+  appData.settings.owner.gender = document.getElementById('set-owner-gender').value;
+  appData.settings.owner.birthYear = parseInt(document.getElementById('set-owner-birthyear').value) || 1970;
+
+  // 배우자 프로필
+  if (!appData.settings.spouse) appData.settings.spouse = {};
+  appData.settings.spouse.name = document.getElementById('set-spouse-name').value;
+  appData.settings.spouse.nickname = document.getElementById('set-spouse-nickname').value;
+  appData.settings.spouse.gender = document.getElementById('set-spouse-gender').value;
+  appData.settings.spouse.birthYear = parseInt(document.getElementById('set-spouse-birthyear').value) || 1972;
+
+  // birth 호환 유지 (본인 출생연도 기준)
+  appData.settings.birth = appData.settings.owner.birthYear + '-01';
+
+  appData.settings.retireYear = parseInt(document.getElementById('set-retireyear').value) || 2029;
+  appData.settings.inflationRate = parseFloat(document.getElementById('set-inflation').value) || 2;
+  appData.settings.dividendGrowthRate = parseFloat(document.getElementById('set-divgrowth').value) || 2.5;
+  appData.settings.pensionTaxRate = parseFloat(document.getElementById('set-pensiontax').value) || 3.3;
+  appData.settings.dividendTaxRate = parseFloat(document.getElementById('set-divtax').value) || 15.4;
+  saveData();
+  calculateCashflow();
+  showToast('설정이 저장되었습니다');
+}
+
+function loadSettings() {
+  const o = appData.settings.owner || {};
+  const s = appData.settings.spouse || {};
+  document.getElementById('set-owner-name').value = o.name || '';
+  document.getElementById('set-owner-nickname').value = o.nickname || '';
+  document.getElementById('set-owner-gender').value = o.gender || 'male';
+  document.getElementById('set-owner-birthyear').value = o.birthYear || 1970;
+  document.getElementById('set-spouse-name').value = s.name || '';
+  document.getElementById('set-spouse-nickname').value = s.nickname || '';
+  document.getElementById('set-spouse-gender').value = s.gender || 'female';
+  document.getElementById('set-spouse-birthyear').value = s.birthYear || 1972;
+
+  document.getElementById('set-retireyear').value = appData.settings.retireYear || 2029;
+  document.getElementById('set-inflation').value = appData.settings.inflationRate;
+  document.getElementById('set-divgrowth').value = appData.settings.dividendGrowthRate;
+  document.getElementById('set-pensiontax').value = appData.settings.pensionTaxRate;
+  document.getElementById('set-divtax').value = appData.settings.dividendTaxRate;
+}
+
+function exportData() {
+  const blob = new Blob([JSON.stringify(appData, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `은퇴자산관리_${new Date().toISOString().slice(0,10)}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+  showToast('데이터가 내보내기 되었습니다');
+}
+
+function importData(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      const imported = JSON.parse(e.target.result);
+      appData = { ...appData, ...imported };
+      appData.settings = { ...appData.settings, ...(imported.settings || {}) };
+      saveData();
+      loadSettings();
+      renderIncomes();
+      renderExpenses();
+      renderAssets();
+      renderAccounts();
+      calculateCashflow();
+      showToast('데이터를 성공적으로 가져왔습니다');
+    } catch(err) {
+      showToast('파일 형식이 올바르지 않습니다');
+    }
+  };
+  reader.readAsText(file);
+  event.target.value = '';
+}
+
+function resetAllData() {
+  if (!confirm('모든 데이터를 초기화하시겠습니까? 이 작업은 되돌릴 수 없습니다.')) return;
+  localStorage.removeItem('retireApp');
+  location.reload();
+}
+
+// ===================================================================
+//  샘플 데이터 (첫 실행시)
+// ===================================================================
+
+function loadSampleData() {
+  if (appData.incomes.length > 0 || appData.assets.length > 0) return;
+
+  // 프로필 기본값 (임의의 예시)
+  appData.settings.owner = { name: '사용자A', nickname: '본인', gender: 'male', birthYear: 1975 };
+  appData.settings.spouse = { name: '사용자B', nickname: '배우자', gender: 'female', birthYear: 1977 };
+  appData.settings.birth = '1975-01';
+
+  // 예시 수입원 (연금 + 투자수입 + 기타수입)
+  appData.incomes = [
+    { type:'pension', owner:'본인', provider:'(예시) 연금공단', product:'퇴직연금', startYear:2030, endYear:2060, monthlyAmount:200, growthRate:1.0 },
+    { type:'pension', owner:'본인', provider:'(예시) 증권사', product:'연금저축 ETF', startYear:2035, endYear:2055, monthlyAmount:100, growthRate:2.0 },
+    { type:'investment', owner:'본인', provider:'(예시) 증권사', product:'배당금 수입', startYear:2030, endYear:2060, monthlyAmount:50, growthRate:3.0 },
+    { type:'other', owner:'본인', provider:'(예시) 기타', product:'임대 수입', startYear:2030, endYear:2050, monthlyAmount:80, growthRate:1.5 },
+  ];
+
+  // 예시 지출 (고정비 + 변동비)
+  appData.expenses = [
+    { name:'생활비', type:'fixed', monthlyAmount:300, startYear:2030, endYear:2060, growthRate:2.0 },
+    { name:'보험/의료', type:'fixed', monthlyAmount:30, startYear:2030, endYear:2060, growthRate:3.0 },
+    { name:'여행/레저', type:'variable', monthlyAmount:50, startYear:2030, endYear:2060, growthRate:2.0 },
+    { name:'경조사/용돈', type:'variable', monthlyAmount:20, startYear:2030, endYear:2060, growthRate:1.0 },
+  ];
+
+  // 예시 자산 (간소화)
+  appData.assets = [
+    { category:'연금', name:'(예시) 퇴직연금 적립금', amount:30000 },
+    { category:'예적금/현금', name:'(예시) 예적금', amount:5000 },
+  ];
+
+  // 예시 계좌 (간소화)
+  appData.accounts = [
+    {
+      owner: '본인', name: '(예시) 연금저축 계좌', type: '연금저축', broker: '증권사',
+      holdings: [
+        { name:'(예시) ETF종목', stockCode:'', purchasePrice:10000, quantity:10, currentPrice:12000, dividendYield:2.0, dividendFrequency:'quarterly' },
+      ]
+    },
+    {
+      owner: '배우자', name: '(예시) IRP 계좌', type: 'IRP', broker: '증권사',
+      holdings: [
+        { name:'(예시) 배당ETF', stockCode:'', purchasePrice:9000, quantity:15, currentPrice:10500, dividendYield:3.0, dividendFrequency:'monthly' },
+      ]
+    },
+  ];
+
+  saveData();
+}
+
+// ===================================================================
+//  초기화
+// ===================================================================
+
+function init() {
+  // 테마
+  if (localStorage.getItem('theme') === 'dark') {
+    document.body.classList.add('dark');
+    document.querySelector('.theme-toggle').textContent = '☀️';
+  }
+
+  loadData();
+  loadSampleData();
+  loadSettings();
+  renderIncomes();
+  renderExpenses();
+  calculateCashflow();
+  renderFooters();
+}
+
+// 은퇴 관련 명언
+const retirementQuotes = [
+  { text: "은퇴는 끝이 아니라, 진정한 삶의 시작이다.", author: "— 로버트 아커만" },
+  { text: "노후 준비의 가장 좋은 시기는 20년 전이었고, 그 다음으로 좋은 시기는 바로 지금이다.", author: "— 중국 속담 응용" },
+  { text: "복리는 세계 8번째 불가사의다. 이해하는 자는 벌고, 모르는 자는 지불한다.", author: "— 앨버트 아인슈타인" },
+  { text: "부자가 되는 비결은 간단하다. 지출을 수입보다 적게 하고, 나머지를 투자하라.", author: "— 벤저민 프랭클린" },
+  { text: "인생에서 가장 큰 위험은 아무런 위험도 감수하지 않는 것이다.", author: "— 마크 저커버그" },
+  { text: "당신의 미래는 오늘 무엇을 하느냐에 달려있다.", author: "— 마하트마 간디" },
+  { text: "돈은 자유를 사는 것이다. 무엇보다 시간의 자유를.", author: "— 모건 하우절" },
+  { text: "은퇴 후 행복의 열쇠는 돈이 아니라, 의미 있는 일상을 만드는 것이다.", author: "— 어니 젤린스키" },
+  { text: "저축은 미래의 나에게 보내는 가장 확실한 선물이다.", author: "— 워런 버핏" },
+  { text: "시간과 복리는 최고의 파트너다. 일찍 시작하면 적게 넣어도 크게 자란다.", author: "— 존 보글" },
+  { text: "당신이 잠자는 동안에도 돈이 일하게 하지 않으면, 죽을 때까지 일해야 한다.", author: "— 워런 버핏" },
+  { text: "은퇴 계획이 없다면, 당신은 다른 사람의 계획에 속하게 될 것이다.", author: "— 짐 론" },
+  { text: "재정적 자유란 선택할 수 있는 능력이다.", author: "— 데이브 램지" },
+  { text: "오늘의 작은 절약이 내일의 큰 자유가 된다.", author: "— 벤저민 프랭클린" },
+  { text: "행복한 은퇴는 저절로 오지 않는다. 계획하고 준비하는 사람에게 찾아온다.", author: "— 리 아이아코카" }
+];
+
+function renderFooters() {
+  const quote = retirementQuotes[Math.floor(Math.random() * retirementQuotes.length)];
+  const footerHTML = `
+    <div class="footer-quote">"${quote.text}"</div>
+    <div class="footer-author">${quote.author}</div>
+    <div class="footer-copy">나의 은퇴 시뮬레이터 by 쫑아빠 · © 2026 All rights reserved.</div>
+  `;
+  ['footer-tab1','footer-tab2','footer-tab3','footer-tab4'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.innerHTML = footerHTML;
+  });
+}
+
+init();
+
+// PWA Service Worker 등록
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('./sw.js')
+      .then(reg => console.log('SW registered:', reg.scope))
+      .catch(err => console.log('SW registration failed:', err));
+  });
+}
+
+// PWA 설치 프롬프트
+let deferredPrompt;
+window.addEventListener('beforeinstallprompt', (e) => {
+  e.preventDefault();
+  deferredPrompt = e;
+  // 설치 배너 표시
+  const banner = document.createElement('div');
+  banner.id = 'pwa-install-banner';
+  banner.innerHTML = `
+    <div style="position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:var(--primary);color:white;padding:12px 20px;border-radius:12px;box-shadow:0 4px 20px rgba(0,0,0,0.3);display:flex;align-items:center;gap:12px;z-index:10000;font-size:0.9rem;">
+      <span>📲 홈 화면에 추가하면 앱처럼 사용할 수 있어요!</span>
+      <button onclick="installPWA()" style="background:white;color:var(--primary);border:none;padding:8px 16px;border-radius:8px;font-weight:700;cursor:pointer;white-space:nowrap;">설치</button>
+      <button onclick="this.parentElement.parentElement.remove()" style="background:none;border:none;color:rgba(255,255,255,0.7);cursor:pointer;font-size:1.2rem;">&times;</button>
+    </div>`;
+  document.body.appendChild(banner);
+});
+
+function installPWA() {
+  if (deferredPrompt) {
+    deferredPrompt.prompt();
+    deferredPrompt.userChoice.then(result => {
+      deferredPrompt = null;
+      const banner = document.getElementById('pwa-install-banner');
+      if (banner) banner.remove();
+    });
+  }
+}
+</script>
+</body>
+</html>
